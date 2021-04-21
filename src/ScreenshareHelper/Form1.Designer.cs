@@ -29,20 +29,14 @@ namespace ScreenshareHelper
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
-            this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.buttonSetCaptureArea = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // timer1
-            // 
-            this.timer1.Interval = 30;
-            // 
-            // button2
+            // buttonSetCaptureArea
             // 
             this.buttonSetCaptureArea.Location = new System.Drawing.Point(12, 12);
-            this.buttonSetCaptureArea.Name = "button2";
+            this.buttonSetCaptureArea.Name = "buttonSetCaptureArea";
             this.buttonSetCaptureArea.Size = new System.Drawing.Size(94, 29);
             this.buttonSetCaptureArea.TabIndex = 1;
             this.buttonSetCaptureArea.Text = "Set";
@@ -68,7 +62,6 @@ namespace ScreenshareHelper
         }
 
         #endregion
-        private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.Button buttonSetCaptureArea;
     }
 }
