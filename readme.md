@@ -11,7 +11,7 @@ I started building this tool on .net 5 windows forms, so you should install the 
 
 ## Download
 
-[ScreenshareHelper.exe]()
+[ScreenshareHelper.exe](https://github.com/michiproep/ScreenshareHelper/tree/master/bin)
 
 ## How to use the tool?
 1. Start ScreenshareHelper.exe => Transparent window appears
