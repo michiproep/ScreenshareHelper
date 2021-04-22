@@ -23,11 +23,46 @@ namespace ScreenshareHelper
         public Form1()
         {
             InitializeComponent();
+            FormBorderStyle = FormBorderStyle.None;
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.TransparencyKey = transKey;
             RestoreWindowPosition();
+
+            this.MouseDown += Form1_MouseDown;
         }
-        
+
+        #region Drag/Move the form
+        public const int WM_NCLBUTTONDOWN = 0xA1;
+        public const int HT_CAPTION = 0x2;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern bool ReleaseCapture();
+
+        private void Form1_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                Cursor.Current = Cursors.Cross;
+                ReleaseCapture();
+                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+            }
+        }
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                if(isActive)
+                    cp.Style |= 0x40000; //WS_SIZEBOX;  
+                else
+                    cp.Style &= ~0x40000; //WS_SIZEBOX;  
+                return cp;
+            }
+        }
+        #endregion
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             if (isActive)
@@ -63,6 +98,8 @@ namespace ScreenshareHelper
         #endregion Cursor
         private void paint(Graphics graphics, bool withMouse = true)
         {
+            //graphics.Clear(transKey);
+            //graphics.FillRectangle(new SolidBrush(transKey), 0, 0, Settings.Default.CaptureSize.Width, Settings.Default.CaptureSize.Height);
             graphics.CopyFromScreen(Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, 0, 0, Settings.Default.CaptureSize);
             if (withMouse)
             {
@@ -82,8 +119,15 @@ namespace ScreenshareHelper
                     }
                 }
             }
+
+            //cut my own area
+            //graphics.FillRectangle(Brushes.Black, 0, 0, Settings.Default.CaptureSize.Width, Settings.Default.CaptureSize.Height);
         }
-      
+
+
+
+        #region Window Events
+
         private void buttonSetCaptureArea_Click(object sender, EventArgs e)
         {
             Settings.Default.CaptureLocation = this.Location;
@@ -118,15 +162,16 @@ namespace ScreenshareHelper
         private void Form1_Activated(object sender, EventArgs e)
         {
             isActive = true;
-            FormBorderStyle = FormBorderStyle.Sizable;
-            buttonSetCaptureArea.Visible = isActive;
+            FormBorderStyle = FormBorderStyle.None;//update CreateParams
+            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
         }
         private void Form1_Deactivate(object sender, EventArgs e)
         {
-            FormBorderStyle = FormBorderStyle.None;
-            this.Size = Settings.Default.CaptureSize;
             isActive = false;
-            buttonSetCaptureArea.Visible = isActive;
+            FormBorderStyle = FormBorderStyle.None; //update CreateParams
+            this.Size = Settings.Default.CaptureSize;
+            
+            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -146,5 +191,12 @@ namespace ScreenshareHelper
             t.IsBackground = true;
             t.Start();
         }
+
+        private void buttonCloseApp_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        #endregion
     }
 }

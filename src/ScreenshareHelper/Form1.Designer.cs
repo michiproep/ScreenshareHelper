@@ -31,6 +31,7 @@ namespace ScreenshareHelper
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.buttonSetCaptureArea = new System.Windows.Forms.Button();
+            this.buttonCloseApp = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // buttonSetCaptureArea
@@ -43,11 +44,22 @@ namespace ScreenshareHelper
             this.buttonSetCaptureArea.UseVisualStyleBackColor = true;
             this.buttonSetCaptureArea.Click += new System.EventHandler(this.buttonSetCaptureArea_Click);
             // 
+            // buttonCloseApp
+            // 
+            this.buttonCloseApp.Location = new System.Drawing.Point(112, 12);
+            this.buttonCloseApp.Name = "buttonCloseApp";
+            this.buttonCloseApp.Size = new System.Drawing.Size(94, 29);
+            this.buttonCloseApp.TabIndex = 1;
+            this.buttonCloseApp.Text = "Close App";
+            this.buttonCloseApp.UseVisualStyleBackColor = true;
+            this.buttonCloseApp.Click += new System.EventHandler(this.buttonCloseApp_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.buttonCloseApp);
             this.Controls.Add(this.buttonSetCaptureArea);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Form1";
@@ -63,6 +75,7 @@ namespace ScreenshareHelper
 
         #endregion
         private System.Windows.Forms.Button buttonSetCaptureArea;
+        private System.Windows.Forms.Button buttonCloseApp;
     }
 }
 
