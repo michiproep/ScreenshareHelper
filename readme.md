@@ -12,6 +12,7 @@ I started building this tool on .net 5 windows forms, so you should install the 
 ## Download
 
 [ScreenshareHelper.exe](https://github.com/michiproep/ScreenshareHelper/tree/master/bin)
+Either use x86 or x64 precompiled verion.
 
 ## How to use the tool?
 1. Start ScreenshareHelper.exe => Transparent window appears
@@ -27,6 +28,18 @@ I started building this tool on .net 5 windows forms, so you should install the 
 
 You can actually move the tool to another screen (if you wish and got one) - once you set the capture area with the set-button. This way you can actually see what's happening 
 
+## Command Line Options / SnapToProcess
+You can create a .bat file or use a desktop shortcut to add command line options to let the tool snap to a certain process on startup.
+Use process name or better process ID (MainWindow process ID) to accomplish this.
+
+-n => Process name (e.g. firefox)
+-i => PID
+
+Examples
+```
+ScreenshareHelper.exe -n notepad2
+ScreenshareHelper.exe -i 12345
+```
 ## Donate
 If you like the tool, just [Paypal.me](https://paypal.me/mlproe?locale.x=de_DE)
 
