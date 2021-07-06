@@ -2,7 +2,7 @@
   "profiles": {
     "ScreenshareHelper": {
       "commandName": "Project",
-      "commandLineArgs": "-i 35188"
+      "commandLineArgs": "-n firefox -h"
     }
   }
 }

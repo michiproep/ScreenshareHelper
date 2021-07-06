@@ -9,5 +9,8 @@ namespace ScreenshareHelper
 
         [Option('i', "pid", Required = false, HelpText = "Process ID to snap to at startup.", SetName = "process")]
         public int? ProcessID { get; set; }
+
+        [Option('h', "autohide", Required = false, HelpText = "If snap to process is used, this option automatically brings this process to front")]
+        public bool AutoHide { get; set; } = false;
     }
 }

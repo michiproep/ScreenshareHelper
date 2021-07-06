@@ -19,6 +19,16 @@ namespace ScreenshareHelper
     {
         readonly Color transKey = Color.SaddleBrown;
         private bool isActive = true;
+        public Form1(Options options):this()
+        {
+            if (options != null)
+            {
+                if (!string.IsNullOrEmpty(options.Process))
+                    SnapToProcess(options.Process, options.AutoHide);
+                else if (options.ProcessID.HasValue)
+                    SnapToProcess(options.ProcessID.Value, options.AutoHide);
+            }
+        }
 
         public Form1()
         {
@@ -30,6 +40,42 @@ namespace ScreenshareHelper
 
             this.MouseDown += Form1_MouseDown;
         }
+
+
+        #region SnapToProcess
+        
+        private void SnapToProcess(int processID, bool autoHide)
+        {
+            var p = System.Diagnostics.Process.GetProcessById(processID);
+            if (p != null && p.MainWindowHandle != IntPtr.Zero)
+            {
+                if (Win32.GetWindowRect(p.MainWindowHandle, out Win32.RECT r))
+                {
+                    r = Win32.GetWindowBounds(p.MainWindowHandle);
+                    Settings.Default.CaptureLocation = new System.Drawing.Point(r.left, r.top);
+                    Settings.Default.CaptureSize = new System.Drawing.Size(r.right - r.left, r.bottom - r.top);
+                    Settings.Default.Save();
+
+                    if (autoHide)
+                    {
+                        EventHandler shownHandleOneTimeOnly = null;
+                        shownHandleOneTimeOnly = (s, e) => { Win32.SetForegroundWindow(p.MainWindowHandle); this.Shown -= shownHandleOneTimeOnly; };
+                        this.Shown += shownHandleOneTimeOnly;
+                    }
+                }
+            }
+        }
+
+        private void SnapToProcess(string process, bool autoHide)
+        {
+            //find process
+            var tmp = System.Diagnostics.Process.GetProcesses();
+            var p = System.Diagnostics.Process.GetProcessesByName(process).FirstOrDefault();
+            if (p != null)
+                SnapToProcess(p.Id, autoHide);
+        }
+        #endregion
+
 
         #region Drag/Move the form
         public const int WM_NCLBUTTONDOWN = 0xA1;
