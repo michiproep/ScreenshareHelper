@@ -38,7 +38,16 @@ namespace ScreenshareHelper
         #region SnapToProcess
         private static void SnapToProcess(int processID)
         {
-            var p = System.Diagnostics.Process.GetProcessById(processID);
+            System.Diagnostics.Process p = null;
+
+            try
+            {
+                p = System.Diagnostics.Process.GetProcessById(processID);
+            }
+            catch 
+            {
+                //nothing to do
+            }
             if(p != null && p.MainWindowHandle != IntPtr.Zero)
             {
                 if(GetWindowRect(p.MainWindowHandle, out RECT r))

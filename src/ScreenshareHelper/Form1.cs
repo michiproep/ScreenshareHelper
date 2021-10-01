@@ -110,12 +110,16 @@ namespace ScreenshareHelper
                 {
                     if (pci.flags == CURSOR_SHOWING)
                     {
-                        const int offset = 5;
-                        DrawIcon(graphics.GetHdc(), 
-                            pci.ptScreenPos.x - Settings.Default.CaptureLocation.X - offset, 
-                            pci.ptScreenPos.y - Settings.Default.CaptureLocation.Y - offset, 
-                            pci.hCursor);
-                        graphics.ReleaseHdc();
+                        bool showMouse = this.Location != Settings.Default.CaptureLocation;
+                        if (showMouse)
+                        {
+                            const int offset = 5;
+                            DrawIcon(graphics.GetHdc(),
+                                pci.ptScreenPos.x - Settings.Default.CaptureLocation.X - offset,
+                                pci.ptScreenPos.y - Settings.Default.CaptureLocation.Y - offset,
+                                pci.hCursor);
+                            graphics.ReleaseHdc();
+                        }
                     }
                 }
             }
