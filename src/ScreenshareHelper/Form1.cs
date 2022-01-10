@@ -1,5 +1,4 @@
-﻿using ScreenshareHelper.Properties;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -12,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using ScreenshareHelper.Properties;
 
 namespace ScreenshareHelper
 {
@@ -55,7 +55,7 @@ namespace ScreenshareHelper
             get
             {
                 CreateParams cp = base.CreateParams;
-                if(isActive)
+                if (isActive)
                     cp.Style |= 0x40000; //WS_SIZEBOX;  
                 else
                     cp.Style &= ~0x40000; //WS_SIZEBOX;  
@@ -68,7 +68,7 @@ namespace ScreenshareHelper
             if (isActive)
                 e.Graphics.Clear(transKey);
             else
-                paint(e.Graphics);
+                paint(e.Graphics, !this.ContainsFocus);
         }
 
         #region Cursor
@@ -98,28 +98,29 @@ namespace ScreenshareHelper
         #endregion Cursor
         private void paint(Graphics graphics, bool withMouse = true)
         {
-            //graphics.Clear(transKey);
-            //graphics.FillRectangle(new SolidBrush(transKey), 0, 0, Settings.Default.CaptureSize.Width, Settings.Default.CaptureSize.Height);
-            graphics.CopyFromScreen(Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, 0, 0, Settings.Default.CaptureSize);
+            try
+            {
+                //graphics.Clear(transKey);
+                //graphics.FillRectangle(new SolidBrush(transKey), 0, 0, Settings.Default.CaptureSize.Width, Settings.Default.CaptureSize.Height);
+                graphics.CopyFromScreen(Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, 0, 0, Settings.Default.CaptureSize);
+            }
+            catch (Exception)
+            { }
             if (withMouse)
             {
                 CURSORINFO pci;
                 pci.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(CURSORINFO));
-
+                int offsetX = SystemInformation.FrameBorderSize.Width + SystemInformation.BorderSize.Width;
+                int offsetY = SystemInformation.FrameBorderSize.Height + SystemInformation.BorderSize.Height;
                 if (GetCursorInfo(out pci))
                 {
                     if (pci.flags == CURSOR_SHOWING)
                     {
-                        bool showMouse = this.Location != Settings.Default.CaptureLocation;
-                        if (showMouse)
-                        {
-                            const int offset = 5;
-                            DrawIcon(graphics.GetHdc(),
-                                pci.ptScreenPos.x - Settings.Default.CaptureLocation.X - offset,
-                                pci.ptScreenPos.y - Settings.Default.CaptureLocation.Y - offset,
-                                pci.hCursor);
-                            graphics.ReleaseHdc();
-                        }
+                        DrawIcon(graphics.GetHdc(),
+                            pci.ptScreenPos.x - this.Location.X - offsetX,
+                            pci.ptScreenPos.y - this.Location.Y - offsetY,
+                            pci.hCursor);
+                        graphics.ReleaseHdc();
                     }
                 }
             }
@@ -137,7 +138,7 @@ namespace ScreenshareHelper
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
         }
-        
+
         private void RestoreWindowPosition()
         {
             if (Settings.Default.HasSetDefaults)
@@ -174,7 +175,7 @@ namespace ScreenshareHelper
             isActive = false;
             FormBorderStyle = FormBorderStyle.None; //update CreateParams
             this.Size = Settings.Default.CaptureSize;
-            
+
             buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
