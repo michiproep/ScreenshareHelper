@@ -1,15 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using ScreenshareHelper.Properties;
 
@@ -63,12 +55,12 @@ namespace ScreenshareHelper
             }
         }
         #endregion
-        protected override void OnPaintBackground(PaintEventArgs e)
+        protected void OnPaintBackground(Graphics g)
         {
             if (isActive)
-                e.Graphics.Clear(transKey);
+                g.Clear(transKey);
             else
-                paint(e.Graphics, !this.ContainsFocus);
+                paint(g, !this.ContainsFocus);
         }
 
         #region Cursor
@@ -100,33 +92,28 @@ namespace ScreenshareHelper
         {
             try
             {
-                //graphics.Clear(transKey);
-                //graphics.FillRectangle(new SolidBrush(transKey), 0, 0, Settings.Default.CaptureSize.Width, Settings.Default.CaptureSize.Height);
                 graphics.CopyFromScreen(Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, 0, 0, Settings.Default.CaptureSize);
-            }
-            catch (Exception)
-            { }
-            if (withMouse)
-            {
-                CURSORINFO pci;
-                pci.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(CURSORINFO));
-                int offsetX = SystemInformation.FrameBorderSize.Width + SystemInformation.BorderSize.Width;
-                int offsetY = SystemInformation.FrameBorderSize.Height + SystemInformation.BorderSize.Height;
-                if (GetCursorInfo(out pci))
+                if (withMouse)
                 {
-                    if (pci.flags == CURSOR_SHOWING)
+                    CURSORINFO pci;
+                    pci.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(CURSORINFO));
+                    int offsetX = SystemInformation.FrameBorderSize.Width + SystemInformation.BorderSize.Width;
+                    int offsetY = SystemInformation.FrameBorderSize.Height + SystemInformation.BorderSize.Height;
+                    if (GetCursorInfo(out pci))
                     {
-                        DrawIcon(graphics.GetHdc(),
-                            pci.ptScreenPos.x - this.Location.X - offsetX,
-                            pci.ptScreenPos.y - this.Location.Y - offsetY,
-                            pci.hCursor);
-                        graphics.ReleaseHdc();
+                        if (pci.flags == CURSOR_SHOWING)
+                        {
+                            DrawIcon(graphics.GetHdc(),
+                                pci.ptScreenPos.x - this.Location.X - offsetX,
+                                pci.ptScreenPos.y - this.Location.Y - offsetY,
+                                pci.hCursor);
+                            graphics.ReleaseHdc();
+                        }
                     }
                 }
             }
-
-            //cut my own area
-            //graphics.FillRectangle(Brushes.Black, 0, 0, Settings.Default.CaptureSize.Width, Settings.Default.CaptureSize.Height);
+            catch (Exception)
+            { }
         }
 
 
@@ -137,6 +124,7 @@ namespace ScreenshareHelper
         {
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
+            SaveWindowPosition();
         }
 
         private void RestoreWindowPosition()
@@ -178,19 +166,14 @@ namespace ScreenshareHelper
 
             buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
         }
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            SaveWindowPosition();
-        }
         private void Form1_Load(object sender, EventArgs e)
         {
             Thread t = new Thread(() =>
             {
                 while (true)
                 {
-                    if (!isActive)
-                        Invalidate();
-                    Thread.Sleep(10);
+                    this.OnPaintBackground(Graphics.FromHwnd(this.Handle));
+                    Thread.Sleep(200);
                 }
             });
             t.IsBackground = true;
