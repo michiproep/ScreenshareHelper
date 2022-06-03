@@ -104,8 +104,8 @@ namespace ScreenshareHelper
                         if (pci.flags == CURSOR_SHOWING)
                         {
                             DrawIcon(graphics.GetHdc(),
-                                pci.ptScreenPos.x - this.Location.X - offsetX,
-                                pci.ptScreenPos.y - this.Location.Y - offsetY,
+                                pci.ptScreenPos.x - Settings.Default.CaptureLocation.X - offsetX,
+                                pci.ptScreenPos.y - Settings.Default.CaptureLocation.Y - offsetY,
                                 pci.hCursor);
                             graphics.ReleaseHdc();
                         }
@@ -124,7 +124,6 @@ namespace ScreenshareHelper
         {
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
-            SaveWindowPosition();
         }
 
         private void RestoreWindowPosition()
@@ -166,14 +165,21 @@ namespace ScreenshareHelper
 
             buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
         }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            SaveWindowPosition();
+        }
+
         private void Form1_Load(object sender, EventArgs e)
         {
+            var h = this.Handle;
             Thread t = new Thread(() =>
             {
                 while (true)
                 {
-                    this.OnPaintBackground(Graphics.FromHwnd(this.Handle));
-                    Thread.Sleep(200);
+                    this.OnPaintBackground(Graphics.FromHwnd(h));
+                    Thread.Sleep(100);
                 }
             });
             t.IsBackground = true;
