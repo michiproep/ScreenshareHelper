@@ -16,7 +16,7 @@ Either use x86 or x64 precompiled verion.
 
 ## How to use the tool?
 1. Start ScreenshareHelper.exe => Transparent window appears
-2. Position the window over the are you want to share (Drag, Resize)
+2. Position the window over the area you want to share (Drag, Resize)
 3. Click the "set" button
 4. Done!
 5. Now you can share this window via your meeting tool and put your other windows in that area.
