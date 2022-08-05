@@ -7,7 +7,7 @@ So, I came up with this little tool. It's not perfect yet but it works for me.
 I also use FancyZones from Microsoft's PowerToys which - together with this tool - makes it quite easy to get this done.
 
 ## Prerequisites
-I started building this tool on .net 5 windows forms, so you should install the [.net 5 runtime](https://dotnet.microsoft.com/download/dotnet/5.0) up front.
+I built this tool on .net 6 windows forms, so you should install the [.net 6 runtime](https://dotnet.microsoft.com/download/dotnet/6.0) up front.
 
 ## Download
 
