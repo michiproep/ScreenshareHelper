@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Drawing;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Windows.Forms;
 using ScreenshareHelper.Properties;
 
@@ -20,11 +18,24 @@ namespace ScreenshareHelper
             this.TransparencyKey = transKey;
             this.BackColor = transKey;
             this.StartPosition = FormStartPosition.Manual;
+            this.ShowInTaskbar = false;
+
             RestoreWindowPosition();
 
             this.MouseDown += Form1_MouseDown;
             updateVirtualDisplay();
-
+            //WindowState = FormWindowState.Minimized;
+            Pen pen = new Pen(Brushes.Green, 3);
+            this.Paint += (s, e) =>
+            {
+                var g = e.Graphics;
+                g.Clear(transKey);
+                var rect = this.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+                g.DrawRectangle(pen, rect);
+            };
+            this.Resize += (s, e) => { Invalidate(); };
         }
 
         #region Drag/Move the form
@@ -66,7 +77,7 @@ namespace ScreenshareHelper
         {
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
-            //this.WindowState = FormWindowState.Minimized;
+            this.WindowState = FormWindowState.Minimized;
             updateVirtualDisplay();
         }
 
@@ -83,7 +94,7 @@ namespace ScreenshareHelper
             if (this.WindowState == FormWindowState.Normal)
             {
                 Settings.Default.Location = this.Location;
-                Settings.Default.Size = this.Size;
+                Settings.Default.Size = new Size(this.Size.Width + this.DefaultMargin.Right + this.DefaultMargin.Left, this.Height + this.DefaultMargin.Top + this.DefaultMargin.Bottom);
             }
             else
             {
@@ -104,10 +115,10 @@ namespace ScreenshareHelper
 
 
             var rectangle = GetCaptureAreaAsRectangle();
-            int offset = 1;
-            Rectangle borderSize = new Rectangle(rectangle.X - offset, rectangle.Y - offset, rectangle.Width + (2 * offset), rectangle.Height + (2 * offset));
+            int offset = 7;
+            Rectangle borderSize = new Rectangle(rectangle.X + offset, rectangle.Y + offset, rectangle.Width - (2*offset), rectangle.Height- (2*offset));
 
-            display.Bounds = borderSize;
+            display.DesktopBounds = borderSize;
             display.Show();
         }
 

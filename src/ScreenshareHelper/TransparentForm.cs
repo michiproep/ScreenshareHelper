@@ -7,7 +7,7 @@ namespace ScreenshareHelper
         {
             public RedBorder()
             {
-            Text = "BORDER";
+            Text = "DISPLAY #1";
             // Set the form style
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.FormBorderStyle = FormBorderStyle.None;
