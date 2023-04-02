@@ -11,16 +11,20 @@ namespace ScreenshareHelper
     {
         readonly Color transKey = Color.SaddleBrown;
         private bool isActive = true;
-
+        VirtualDisplay display;
         public Form1()
         {
             InitializeComponent();
             FormBorderStyle = FormBorderStyle.None;
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.TransparencyKey = transKey;
+            this.BackColor = transKey;
+            this.StartPosition = FormStartPosition.Manual;
             RestoreWindowPosition();
 
             this.MouseDown += Form1_MouseDown;
+            updateVirtualDisplay();
+
         }
 
         #region Drag/Move the form
@@ -55,68 +59,6 @@ namespace ScreenshareHelper
             }
         }
         #endregion
-        protected void OnPaintBackground(Graphics g)
-        {
-            if (isActive)
-                g.Clear(transKey);
-            else
-                paint(g, !this.ContainsFocus);
-        }
-
-        #region Cursor
-        [StructLayout(LayoutKind.Sequential)]
-        struct CURSORINFO
-        {
-            public Int32 cbSize;
-            public Int32 flags;
-            public IntPtr hCursor;
-            public POINTAPI ptScreenPos;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        struct POINTAPI
-        {
-            public int x;
-            public int y;
-        }
-
-        [DllImport("user32.dll")]
-        static extern bool GetCursorInfo(out CURSORINFO pci);
-
-        [DllImport("user32.dll")]
-        static extern bool DrawIcon(IntPtr hDC, int X, int Y, IntPtr hIcon);
-
-        const Int32 CURSOR_SHOWING = 0x00000001;
-        #endregion Cursor
-        private void paint(Graphics graphics, bool withMouse = true)
-        {
-            try
-            {
-                graphics.CopyFromScreen(Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, 0, 0, Settings.Default.CaptureSize);
-                if (withMouse)
-                {
-                    CURSORINFO pci;
-                    pci.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(CURSORINFO));
-                    int offsetX = SystemInformation.FrameBorderSize.Width + SystemInformation.BorderSize.Width;
-                    int offsetY = SystemInformation.FrameBorderSize.Height + SystemInformation.BorderSize.Height;
-                    if (GetCursorInfo(out pci))
-                    {
-                        if (pci.flags == CURSOR_SHOWING)
-                        {
-                            DrawIcon(graphics.GetHdc(),
-                                pci.ptScreenPos.x - Settings.Default.CaptureLocation.X - offsetX,
-                                pci.ptScreenPos.y - Settings.Default.CaptureLocation.Y - offsetY,
-                                pci.hCursor);
-                            graphics.ReleaseHdc();
-                        }
-                    }
-                }
-            }
-            catch (Exception)
-            { }
-        }
-
-
 
         #region Window Events
 
@@ -124,6 +66,8 @@ namespace ScreenshareHelper
         {
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
+            //this.WindowState = FormWindowState.Minimized;
+            updateVirtualDisplay();
         }
 
         private void RestoreWindowPosition()
@@ -151,19 +95,15 @@ namespace ScreenshareHelper
             Settings.Default.Save();
         }
 
-        private void Form1_Activated(object sender, EventArgs e)
-        {
-            isActive = true;
-            FormBorderStyle = FormBorderStyle.None;//update CreateParams
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
-        }
-        private void Form1_Deactivate(object sender, EventArgs e)
-        {
-            isActive = false;
-            FormBorderStyle = FormBorderStyle.None; //update CreateParams
-            this.Size = Settings.Default.CaptureSize;
 
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
+
+        private void updateVirtualDisplay()
+        {
+            if (this.display == null)
+                this.display = new VirtualDisplay(GetCaptureAreaAsRectangle(), "Display #1");
+
+            this.display.UpdateCaptureSize(GetCaptureAreaAsRectangle());
+            this.display.Show();
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -171,26 +111,22 @@ namespace ScreenshareHelper
             SaveWindowPosition();
         }
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            var h = this.Handle;
-            Thread t = new Thread(() =>
-            {
-                while (true)
-                {
-                    this.OnPaintBackground(Graphics.FromHwnd(h));
-                    Thread.Sleep(100);
-                }
-            });
-            t.IsBackground = true;
-            t.Start();
-        }
 
         private void buttonCloseApp_Click(object sender, EventArgs e)
         {
             this.Close();
         }
 
+        private void buttonMinimizeApp_Click(object sender, EventArgs e)
+        {
+            WindowState = FormWindowState.Minimized;
+        }
+
         #endregion
+
+        private Rectangle GetCaptureAreaAsRectangle()
+        {
+            return new Rectangle(Settings.Default.CaptureLocation, Settings.Default.CaptureSize);
+        }
     }
 }

@@ -30,52 +30,61 @@ namespace ScreenshareHelper
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
-            this.buttonSetCaptureArea = new System.Windows.Forms.Button();
-            this.buttonCloseApp = new System.Windows.Forms.Button();
-            this.SuspendLayout();
+            buttonSetCaptureArea = new System.Windows.Forms.Button();
+            buttonCloseApp = new System.Windows.Forms.Button();
+            button1 = new System.Windows.Forms.Button();
+            SuspendLayout();
             // 
             // buttonSetCaptureArea
             // 
-            this.buttonSetCaptureArea.Location = new System.Drawing.Point(12, 12);
-            this.buttonSetCaptureArea.Name = "buttonSetCaptureArea";
-            this.buttonSetCaptureArea.Size = new System.Drawing.Size(94, 29);
-            this.buttonSetCaptureArea.TabIndex = 1;
-            this.buttonSetCaptureArea.Text = "Set";
-            this.buttonSetCaptureArea.UseVisualStyleBackColor = true;
-            this.buttonSetCaptureArea.Click += new System.EventHandler(this.buttonSetCaptureArea_Click);
+            buttonSetCaptureArea.Location = new System.Drawing.Point(12, 12);
+            buttonSetCaptureArea.Name = "buttonSetCaptureArea";
+            buttonSetCaptureArea.Size = new System.Drawing.Size(150, 83);
+            buttonSetCaptureArea.TabIndex = 1;
+            buttonSetCaptureArea.Text = "Set";
+            buttonSetCaptureArea.UseVisualStyleBackColor = true;
+            buttonSetCaptureArea.Click += buttonSetCaptureArea_Click;
             // 
             // buttonCloseApp
             // 
-            this.buttonCloseApp.Location = new System.Drawing.Point(112, 12);
-            this.buttonCloseApp.Name = "buttonCloseApp";
-            this.buttonCloseApp.Size = new System.Drawing.Size(94, 29);
-            this.buttonCloseApp.TabIndex = 1;
-            this.buttonCloseApp.Text = "Close App";
-            this.buttonCloseApp.UseVisualStyleBackColor = true;
-            this.buttonCloseApp.Click += new System.EventHandler(this.buttonCloseApp_Click);
+            buttonCloseApp.Location = new System.Drawing.Point(653, 12);
+            buttonCloseApp.Name = "buttonCloseApp";
+            buttonCloseApp.Size = new System.Drawing.Size(135, 83);
+            buttonCloseApp.TabIndex = 1;
+            buttonCloseApp.Text = "Close App";
+            buttonCloseApp.UseVisualStyleBackColor = true;
+            buttonCloseApp.Click += buttonCloseApp_Click;
+            // 
+            // button1
+            // 
+            button1.Location = new System.Drawing.Point(168, 12);
+            button1.Name = "button1";
+            button1.Size = new System.Drawing.Size(135, 83);
+            button1.TabIndex = 1;
+            button1.Text = "Minimize";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += buttonMinimizeApp_Click;
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.buttonCloseApp);
-            this.Controls.Add(this.buttonSetCaptureArea);
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.Name = "Form1";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
-            this.Text = "ScreensharingHelper";
-            this.Activated += new System.EventHandler(this.Form1_Activated);
-            this.Deactivate += new System.EventHandler(this.Form1_Deactivate);
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
-            this.Load += new System.EventHandler(this.Form1_Load);
-            this.ResumeLayout(false);
-
+            AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            ClientSize = new System.Drawing.Size(800, 450);
+            Controls.Add(button1);
+            Controls.Add(buttonCloseApp);
+            Controls.Add(buttonSetCaptureArea);
+            Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
+            Name = "Form1";
+            StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+            Text = "ScreensharingHelper";
+            FormClosing += Form1_FormClosing;
+            ResumeLayout(false);
         }
 
         #endregion
         private System.Windows.Forms.Button buttonSetCaptureArea;
         private System.Windows.Forms.Button buttonCloseApp;
+        private System.Windows.Forms.Button button1;
     }
 }
 
