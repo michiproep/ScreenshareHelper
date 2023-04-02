@@ -10,7 +10,7 @@ namespace ScreenshareHelper
             Text = "DISPLAY #1";
             // Set the form style
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-            this.FormBorderStyle = FormBorderStyle.None;
+            //this.FormBorderStyle = FormBorderStyle.None;
                 this.BackColor = Color.White;
                 this.TransparencyKey = Color.White;
                 this.TopMost = true;
@@ -26,17 +26,24 @@ namespace ScreenshareHelper
                 rect.Height -= 1;
                 g.DrawRectangle(pen, rect);
             };
+            //int style = GetWindowLong(this.Handle, GWL_STYLE);
+            //SetWindowLong(this.Handle, GWL_STYLE, (int)(style & (~WS_CAPTION | WS_SIZEBOX)));
         }
+        private const int GWL_STYLE = -16;
+        private const int WS_CAPTION = 0x00C00000;
+        private const int WS_SIZEBOX = 0x40000;
         Pen pen = new Pen(Color.Red, 3);
-        //protected override CreateParams CreateParams
-        //{
-        //    get
-        //    {
-        //        CreateParams cp = base.CreateParams;
-        //            cp.Style |= 0x40000; //WS_SIZEBOX;  
-        //        return cp;
-        //    }
-        //}
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                cp.Style |= 0x40000; //WS_SIZEBOX;  
+                cp.Style &= ~(int)(0x00C00000); // WS_CAPTION | WS_BORDER
+                cp.ExStyle &= ~(int)(0x00000200); // WS_EX_CLIENTEDGE
+                return cp;
+            }
+        }
         // Enable or disable click-through for the form
         private void ClickThrough(bool enable)
             {
