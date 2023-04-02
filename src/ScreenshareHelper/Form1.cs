@@ -11,7 +11,7 @@ namespace ScreenshareHelper
     {
         readonly Color transKey = Color.SaddleBrown;
         private bool isActive = true;
-        VirtualDisplay display;
+        RedBorder display;
         public Form1()
         {
             InitializeComponent();
@@ -100,10 +100,15 @@ namespace ScreenshareHelper
         private void updateVirtualDisplay()
         {
             if (this.display == null)
-                this.display = new VirtualDisplay(GetCaptureAreaAsRectangle(), "Display #1");
+                this.display = new RedBorder();
 
-            this.display.UpdateCaptureSize(GetCaptureAreaAsRectangle());
-            this.display.Show();
+
+            var rectangle = GetCaptureAreaAsRectangle();
+            int offset = 1;
+            Rectangle borderSize = new Rectangle(rectangle.X - offset, rectangle.Y - offset, rectangle.Width + (2 * offset), rectangle.Height + (2 * offset));
+
+            display.Bounds = borderSize;
+            display.Show();
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)

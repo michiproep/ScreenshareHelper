@@ -99,8 +99,8 @@ namespace ScreenshareHelper
             int offset = 1;
             Rectangle borderSize = new Rectangle(rectangle.X - offset, rectangle.Y - offset, rectangle.Width+(2*offset),rectangle.Height+(2*offset));
 
-            //redBorder.Bounds = borderSize;
-            //redBorder.Show();
+            redBorder.Bounds = borderSize;
+            redBorder.Show();
         }
         protected override CreateParams CreateParams
         {

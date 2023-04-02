@@ -7,14 +7,14 @@ namespace ScreenshareHelper
         {
             public RedBorder()
             {
-
+            Text = "BORDER";
             // Set the form style
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.FormBorderStyle = FormBorderStyle.None;
                 this.BackColor = Color.White;
                 this.TransparencyKey = Color.White;
                 this.TopMost = true;
-                ShowInTaskbar = false;
+                ShowInTaskbar = true;
                 this.ClickThrough(true);
             //this.HideFromScreenShare(true);
             // Create a red border
