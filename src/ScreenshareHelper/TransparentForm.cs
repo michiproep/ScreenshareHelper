@@ -12,7 +12,9 @@ namespace ScreenshareHelper
         {
             Text = "SCREENSHARE AREA";
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+            
             this.FormBorderStyle = FormBorderStyle.None;
+            this.SetStyle(ControlStyles.ResizeRedraw, true);
             this.BackColor = Color.White;
             this.TransparencyKey = Color.White;
             this.TopMost = true;
@@ -27,27 +29,30 @@ namespace ScreenshareHelper
                 rect.Height -= 1;
                 g.DrawRectangle(pen, rect);
             };
-            //this.Activated += (s, e) =>
-            //{
-            //    FormBorderStyle = FormBorderStyle.Sizable;
-            //    this.Size = new Size(this.Size.Width, this.Size.Height - captionHeight);
-            //};
-            //this.Deactivate += (s, e) =>
-            //{
-            //    FormBorderStyle = FormBorderStyle.None;
-            //    this.Size = new Size(this.Size.Width, this.Size.Height + captionHeight);
-            //};
-        }
-        
-        protected override CreateParams CreateParams
-        {
-            get
+            this.Activated += (s, e) =>
             {
-                CreateParams cp = base.CreateParams;
-                cp.Style |= 0x40000; //WS_SIZEBOX;  
-                return cp;
-            }
+                FormBorderStyle = FormBorderStyle.Sizable;
+                this.Size = new Size(this.Size.Width, this.Size.Height - captionHeight);
+            };
+            this.Deactivate += (s, e) =>
+            {
+                FormBorderStyle = FormBorderStyle.None;
+                this.Size = new Size(this.Size.Width, this.Size.Height + captionHeight);
+            };
+            //this.Resize += (s, e) => { WindowState = FormWindowState.Normal; };
         }
+
+        //protected override CreateParams CreateParams
+        //{
+        //    get
+        //    {
+        //        CreateParams cp = base.CreateParams;
+        //        cp.Style |= 0x40000; //WS_SIZEBOX;  
+        //        return cp;
+        //    }
+        //}
+
+
         // Enable or disable click-through for the form
         private void ClickThrough(bool enable)
         {
@@ -60,12 +65,12 @@ namespace ScreenshareHelper
 
 
 
-        //[DllImport("user32.dll")]
-        //static extern int GetSystemMetrics(int nIndex);
+        [DllImport("user32.dll")]
+        static extern int GetSystemMetrics(int nIndex);
 
-        //const int SM_CYCAPTION = 4;
+        const int SM_CYCAPTION = 4;
 
-        //int captionHeight = GetSystemMetrics(SM_CYCAPTION) + 10;
+        int captionHeight = GetSystemMetrics(SM_CYCAPTION) + 10;
 
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_TRANSPARENT = 0x20;
