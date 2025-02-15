@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build, Test, and Publish
+    name: Build and Publish
     runs-on: windows-latest
 
     steps:
@@ -48,13 +48,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: published-x86
-          path: ./bin/x86.zip
+          path: "${{ github.workspace }}/bin/x86.zip"
 
       - name: Upload Artifacts (x64)
         uses: actions/upload-artifact@v4
         with:
           name: published-x64
-          path: ./bin/x64.zip
+          path: "${{ github.workspace }}/bin/x64.zip"
 
   release:
     name: Create GitHub Release
