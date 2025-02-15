@@ -97,8 +97,8 @@ namespace ScreenshareHelper
                 {
                     CURSORINFO pci;
                     pci.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(CURSORINFO));
-                    int offsetX = SystemInformation.FrameBorderSize.Width + SystemInformation.BorderSize.Width;
-                    int offsetY = SystemInformation.FrameBorderSize.Height + SystemInformation.BorderSize.Height;
+                    int offsetX = SystemInformation.FrameBorderSize.Width + SystemInformation.BorderSize.Width +5;
+                    int offsetY = SystemInformation.FrameBorderSize.Height + SystemInformation.BorderSize.Height +5;
                     if (GetCursorInfo(out pci))
                     {
                         if (pci.flags == CURSOR_SHOWING)
@@ -119,11 +119,43 @@ namespace ScreenshareHelper
 
 
         #region Window Events
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        //protected override void WndProc(ref Message m)
+        //{
+        //    const int WM_ACTIVATE = 0x0006;
+        //    const int WA_ACTIVE = 1;
+        //    const int WA_CLICKACTIVE = 2;
+
+        //    base.WndProc(ref m);
+
+        //    if (m.Msg == WM_ACTIVATE)
+        //    {
+        //        int wParam = m.WParam.ToInt32();
+        //        if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
+        //        {
+        //            // Bring the window to the front when activated via taskbar
+        //            SetForegroundWindow(this.Handle);
+        //        }
+        //    }
+        //}
+
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        private static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOACTIVATE = 0x0010;
 
         private void buttonSetCaptureArea_Click(object sender, EventArgs e)
         {
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
+
+            // Send window to the background
+            SetWindowPos(this.Handle, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE );
         }
 
         private void RestoreWindowPosition()
