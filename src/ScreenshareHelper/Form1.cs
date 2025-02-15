@@ -252,7 +252,7 @@ namespace ScreenshareHelper
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
-            isActive = false;
+            isActive = true;
             setWindowToBackground();
         }
 
