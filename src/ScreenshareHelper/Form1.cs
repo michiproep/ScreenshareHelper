@@ -87,6 +87,12 @@ namespace ScreenshareHelper
         static extern bool DrawIcon(IntPtr hDC, int X, int Y, IntPtr hIcon);
 
         const Int32 CURSOR_SHOWING = 0x00000001;
+        [DllImport("gdi32.dll")]
+        private static extern bool BitBlt(IntPtr hdcDest, int xDest, int yDest, int width, int height, IntPtr hdcSrc, int xSrc, int ySrc, int rop);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetDC(IntPtr hwnd);
+        private const int SRCCOPY = 0x00CC0020;
         #endregion Cursor
         private void paint(Graphics graphics, bool withMouse = true)
         {
@@ -97,8 +103,8 @@ namespace ScreenshareHelper
                 {
                     CURSORINFO pci;
                     pci.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(CURSORINFO));
-                    int offsetX = SystemInformation.FrameBorderSize.Width + SystemInformation.BorderSize.Width +5;
-                    int offsetY = SystemInformation.FrameBorderSize.Height + SystemInformation.BorderSize.Height +5;
+                    int offsetX = SystemInformation.FrameBorderSize.Width + SystemInformation.BorderSize.Width ;
+                    int offsetY = SystemInformation.FrameBorderSize.Height + SystemInformation.BorderSize.Height ;
                     if (GetCursorInfo(out pci))
                     {
                         if (pci.flags == CURSOR_SHOWING)
@@ -111,6 +117,16 @@ namespace ScreenshareHelper
                         }
                     }
                 }
+                
+                //    IntPtr hdcDest = graphics.GetHdc();
+                //    IntPtr hdcSrc = GetDC(IntPtr.Zero);
+
+                //    BitBlt(hdcDest, 0, 0, Settings.Default.CaptureSize.Width, Settings.Default.CaptureSize.Height,
+                //           hdcSrc, Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, SRCCOPY);
+
+                //graphics.ReleaseHdc(hdcDest);
+                
+            
             }
             catch (Exception)
             { }
@@ -155,7 +171,12 @@ namespace ScreenshareHelper
             Settings.Default.CaptureSize = this.Size;
 
             // Send window to the background
-            SetWindowPos(this.Handle, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE );
+            setWindowToBackground();
+        }
+
+        private void setWindowToBackground()
+        {
+            SetWindowPos(this.Handle, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
         }
 
         private void RestoreWindowPosition()
@@ -182,6 +203,10 @@ namespace ScreenshareHelper
             Settings.Default.HasSetDefaults = true;
             Settings.Default.Save();
         }
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        
 
         private void Form1_Activated(object sender, EventArgs e)
         {
@@ -205,6 +230,12 @@ namespace ScreenshareHelper
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            this.BeginInvoke(new Action(() =>
+            {
+                IntPtr currentWindow = GetForegroundWindow(); // Get the current active window
+                SetForegroundWindow(currentWindow); // Re-focus it, removing focus from our window
+            }));
+
             var h = this.Handle;
             Thread t = new Thread(() =>
             {
@@ -216,6 +247,13 @@ namespace ScreenshareHelper
             });
             t.IsBackground = true;
             t.Start();
+            
+        }
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            isActive = false;
+            setWindowToBackground();
         }
 
         private void buttonCloseApp_Click(object sender, EventArgs e)
