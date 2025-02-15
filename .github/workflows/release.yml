@@ -91,13 +91,20 @@ jobs:
       - name: Get Commit Messages
         id: commit_messages
         run: |
-          if [ -z "$PREV_TAG" ]; then
-            echo "No previous tag found. Using all commits."
-            echo "COMMITS=$(git log --pretty=format:'- %h %s')" >> $GITHUB_ENV
-          else
-            echo "Fetching commits between $PREV_TAG and ${{ github.ref_name }}"
-            echo "COMMITS=$(git log $PREV_TAG..${{ github.ref_name }} --pretty=format:'- %h %s')" >> $GITHUB_ENV
-          fi
+            if [ -z "$PREV_TAG" ]; then
+              echo "No previous tag found. Using all commits."
+              COMMITS=$(git log --pretty=format:'- %h %s')
+            else
+              echo "Fetching commits between $PREV_TAG and ${{ github.ref_name }}"
+              COMMITS=$(git log $PREV_TAG..${{ github.ref_name }} --pretty=format:'- %h %s')
+            fi
+
+            # Properly store multiline commit log
+            {
+              echo "COMMITS<<EOF"
+              echo "$COMMITS"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
 
       - name: Download x86 Artifact
         uses: actions/download-artifact@v4
