@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - '*'  # Trigger on version tags like v1.0.0
+  workflow_dispatch:  # Allow manual execution
 
 jobs:
   build:
@@ -28,10 +29,10 @@ jobs:
       #   run: dotnet test --no-restore --verbosity normal --project src/*.sln
 
       - name: Publish x86
-        run: dotnet publish src/YourProject.csproj -c Release -r win-x86 --self-contained false -p:PublishSingleFile=true -o ../bin/x86
+        run: dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x86 --self-contained false -p:PublishSingleFile=true -o ../bin/x86
 
       - name: Publish x64
-        run: dotnet publish src/YourProject.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ../bin/x64
+        run: dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ../bin/x64
 
       - name: Create ZIP Archives
         run: |
@@ -60,6 +61,23 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Ensures full commit history is available
+      - name: Determine Release Tag
+        id: release_tag
+        run: |
+            if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # If triggered by a tag push, use the tag directly
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+            else
+            # If manually triggered, find last tag and create an RC version
+            LAST_TAG=$(git describe --tags --abbrev=0)
+            EXISTING_RC_COUNT=$(gh release list --json tagName | jq "[.[].tagName | test(\"^${LAST_TAG}-rc\\\\.[0-9]+$\")] | length")
+            NEW_RC_NUMBER=$((EXISTING_RC_COUNT + 1))
+            TAG_NAME="${LAST_TAG}-rc.${NEW_RC_NUMBER}"
+            fi
+            echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
 
       - name: Get Previous Tag
         id: prev_tag
@@ -91,8 +109,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release ${{ env.TAG_NAME }}
           body: |
             ## Changes in this release
             ${{ env.COMMITS }}
