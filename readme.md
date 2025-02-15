@@ -11,7 +11,7 @@ I built this tool on .net 8 windows forms, so you should install the [.net 8 run
 
 ## Download
 
-[ScreenshareHelper.exe](https://github.com/michiproep/ScreenshareHelper/tree/master/bin)
+[zip](https://github.com/michiproep/ScreenshareHelper/releases)
 Either use x86 or x64 precompiled verion.
 
 ## How to use the tool?
