@@ -29,16 +29,19 @@ jobs:
       #   run: dotnet test --no-restore --verbosity normal --project src/*.sln
 
       - name: Publish x86
-        run: dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x86 --self-contained false -p:PublishSingleFile=true -o ../bin/x86
+        run: dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x86 --self-contained false -p:PublishSingleFile=true -o ${{ github.workspace }}/bin/x86
 
       - name: Publish x64
-        run: dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ../bin/x64
+        run: dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ${{ github.workspace }}/bin/x64
 
       - name: Create ZIP Archives (Windows)
         shell: pwsh
         run: |
-            Compress-Archive -Path bin/x86/* -DestinationPath bin/x86.zip
-            Compress-Archive -Path bin/x64/* -DestinationPath bin/x64.zip
+            $x86Path = "${{ github.workspace }}/bin/x86"
+            $x64Path = "${{ github.workspace }}/bin/x64"
+    
+            if (Test-Path $x86Path) { Compress-Archive -Path "$x86Path/*" -DestinationPath "${{ github.workspace }}/bin/x86.zip" }
+            if (Test-Path $x64Path) { Compress-Archive -Path "$x64Path/*" -DestinationPath "${{ github.workspace }}/bin/x64.zip" }
 
 
       - name: Upload Artifacts (x86)
