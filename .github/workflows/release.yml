@@ -127,7 +127,7 @@ jobs:
             ## Changes in this release
             ${{ env.COMMITS }}
           files: |
-            ./bin/x86.zip
-            ./bin/x64.zip
+            ${{ github.workspace }}/bin/x86.zip
+            ${{ github.workspace }}/bin/x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
