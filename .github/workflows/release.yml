@@ -110,13 +110,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: published-x86
-          path: bin/x86
+          path: ${{ github.workspace }}/bin/
 
       - name: Download x64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: published-x64
-          path: bin/x64
+          path: ${{ github.workspace }}/bin/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
