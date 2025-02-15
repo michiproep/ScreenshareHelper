@@ -1,0 +1,103 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0
+
+jobs:
+  build:
+    name: Build, Test, and Publish
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required to fetch all tags
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore src/
+
+      - name: Run Tests
+        run: dotnet test --no-restore --verbosity normal --project src/
+
+      - name: Publish x86
+        run: dotnet publish src/YourProject.csproj -c Release -r win-x86 --self-contained false -p:PublishSingleFile=true -o ../bin/x86
+
+      - name: Publish x64
+        run: dotnet publish src/YourProject.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ../bin/x64
+
+      - name: Create ZIP Archives
+        run: |
+          tar -czvf bin/x86.zip -C bin/x86 .
+          tar -czvf bin/x64.zip -C bin/x64 .
+
+      - name: Upload Artifacts (x86)
+        uses: actions/upload-artifact@v3
+        with:
+          name: published-x86
+          path: ./bin/x86.zip
+
+      - name: Upload Artifacts (x64)
+        uses: actions/upload-artifact@v3
+        with:
+          name: published-x64
+          path: ./bin/x64.zip
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensures full commit history is available
+
+      - name: Get Previous Tag
+        id: prev_tag
+        run: echo "PREV_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=2 | tail -n1))" >> $GITHUB_ENV
+
+      - name: Get Commit Messages
+        id: commit_messages
+        run: |
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found. Using all commits."
+            echo "COMMITS=$(git log --pretty=format:'- %h %s')" >> $GITHUB_ENV
+          else
+            echo "Fetching commits between $PREV_TAG and ${{ github.ref_name }}"
+            echo "COMMITS=$(git log $PREV_TAG..${{ github.ref_name }} --pretty=format:'- %h %s')" >> $GITHUB_ENV
+          fi
+
+      - name: Download x86 Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: published-x86
+          path: ./
+
+      - name: Download x64 Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: published-x64
+          path: ./
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Changes in this release
+            ${{ env.COMMITS }}
+          files: |
+            ./bin/x86.zip
+            ./bin/x64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
