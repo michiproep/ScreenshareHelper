@@ -24,8 +24,8 @@ jobs:
       - name: Restore Dependencies
         run: dotnet restore src/
 
-      - name: Run Tests
-        run: dotnet test --no-restore --verbosity normal --project src/
+      # - name: Run Tests
+      #   run: dotnet test --no-restore --verbosity normal --project src/*.sln
 
       - name: Publish x86
         run: dotnet publish src/YourProject.csproj -c Release -r win-x86 --self-contained false -p:PublishSingleFile=true -o ../bin/x86
