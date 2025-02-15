@@ -34,10 +34,12 @@ jobs:
       - name: Publish x64
         run: dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ../bin/x64
 
-      - name: Create ZIP Archives
+      - name: Create ZIP Archives (Windows)
+        shell: pwsh
         run: |
-          tar -czvf bin/x86.zip -C bin/x86 .
-          tar -czvf bin/x64.zip -C bin/x64 .
+            Compress-Archive -Path bin/x86/* -DestinationPath bin/x86.zip
+            Compress-Archive -Path bin/x64/* -DestinationPath bin/x64.zip
+
 
       - name: Upload Artifacts (x86)
         uses: actions/upload-artifact@v4
