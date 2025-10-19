@@ -21,6 +21,7 @@ namespace ScreenshareHelper
             RestoreWindowPosition();
 
             this.MouseDown += Form1_MouseDown;
+            this.SizeChanged += Form1_SizeChanged;
         }
 
         #region Drag/Move the form
@@ -58,9 +59,27 @@ namespace ScreenshareHelper
         protected void OnPaintBackground(Graphics g)
         {
             if (isActive)
-                g.Clear(transKey);
+            {
+                g.Clear(this.BackColor);
+            }
             else
                 paint(g);
+        }
+
+        private void Form1_SizeChanged(object sender, EventArgs e)
+        {
+            UpdateSizeDisplay();
+        }
+
+        private void UpdateSizeDisplay()
+        {
+            try
+            {
+                var sizeText = $"{this.Width} × {this.Height}";
+                if (this.labelSize != null)
+                    this.labelSize.Text = sizeText;
+            }
+            catch (Exception) { }
         }
 
         #region Cursor
@@ -150,7 +169,6 @@ namespace ScreenshareHelper
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
 
-            // Send window to the background
             setWindowToBackground();
         }
 
@@ -227,6 +245,7 @@ namespace ScreenshareHelper
             });
             t.IsBackground = true;
             t.Start();
+            UpdateSizeDisplay();
             
         }
         protected override void OnShown(EventArgs e)
