@@ -82,5 +82,17 @@ namespace ScreenshareHelper.Properties {
                 this["CaptureSize"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool CopyMouse {
+            get {
+                return ((bool)(this["CopyMouse"]));
+            }
+            set {
+                this["CopyMouse"] = value;
+            }
+        }
     }
 }

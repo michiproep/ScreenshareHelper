@@ -25,6 +25,7 @@ namespace ScreenshareHelper
                         SnapToProcess(o.Process);
                     else if (o.ProcessID.HasValue)
                         SnapToProcess(o.ProcessID.Value);
+                    Settings.Default.CopyMouse = o.CopyMouse;
                 }
                 );
 

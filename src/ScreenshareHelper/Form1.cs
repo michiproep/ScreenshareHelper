@@ -60,7 +60,7 @@ namespace ScreenshareHelper
             if (isActive)
                 g.Clear(transKey);
             else
-                paint(g, !this.ContainsFocus);
+                paint(g);
         }
 
         #region Cursor
@@ -94,42 +94,41 @@ namespace ScreenshareHelper
         private static extern IntPtr GetDC(IntPtr hwnd);
         private const int SRCCOPY = 0x00CC0020;
         #endregion Cursor
-        private void paint(Graphics graphics, bool withMouse = true)
+
+
+        private void paint(Graphics graphics)
         {
             try
             {
                 graphics.CopyFromScreen(Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, 0, 0, Settings.Default.CaptureSize);
-                if (withMouse)
+                if (Settings.Default.CopyMouse)
                 {
-                    CURSORINFO pci;
-                    pci.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(CURSORINFO));
-                    int offsetX = SystemInformation.FrameBorderSize.Width + SystemInformation.BorderSize.Width ;
-                    int offsetY = SystemInformation.FrameBorderSize.Height + SystemInformation.BorderSize.Height ;
-                    if (GetCursorInfo(out pci))
-                    {
-                        if (pci.flags == CURSOR_SHOWING)
-                        {
-                            DrawIcon(graphics.GetHdc(),
-                                pci.ptScreenPos.x - Settings.Default.CaptureLocation.X - offsetX,
-                                pci.ptScreenPos.y - Settings.Default.CaptureLocation.Y - offsetY,
-                                pci.hCursor);
-                            graphics.ReleaseHdc();
-                        }
-                    }
+                    CopyMousePointer(graphics);
                 }
-                
-                //    IntPtr hdcDest = graphics.GetHdc();
-                //    IntPtr hdcSrc = GetDC(IntPtr.Zero);
-
-                //    BitBlt(hdcDest, 0, 0, Settings.Default.CaptureSize.Width, Settings.Default.CaptureSize.Height,
-                //           hdcSrc, Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, SRCCOPY);
-
-                //graphics.ReleaseHdc(hdcDest);
-                
-            
             }
             catch (Exception)
             { }
+        }
+
+        private static void CopyMousePointer(Graphics graphics)
+        {
+            CURSORINFO pci;
+            pci.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(CURSORINFO));
+            int offsetX = SystemInformation.FrameBorderSize.Width + SystemInformation.BorderSize.Width;
+            int offsetY = SystemInformation.FrameBorderSize.Height + SystemInformation.BorderSize.Height;
+            if (GetCursorInfo(out pci))
+            {
+                if (pci.flags == CURSOR_SHOWING)
+                {
+                    DrawIcon(graphics.GetHdc(),
+                        pci.ptScreenPos.x - Settings.Default.CaptureLocation.X - offsetX,
+                        pci.ptScreenPos.y - Settings.Default.CaptureLocation.Y - offsetY,
+                        pci.hCursor);
+                    graphics.ReleaseHdc();
+                }
+            }
+        }
+
         }
 
 
@@ -137,25 +136,6 @@ namespace ScreenshareHelper
         #region Window Events
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        //protected override void WndProc(ref Message m)
-        //{
-        //    const int WM_ACTIVATE = 0x0006;
-        //    const int WA_ACTIVE = 1;
-        //    const int WA_CLICKACTIVE = 2;
-
-        //    base.WndProc(ref m);
-
-        //    if (m.Msg == WM_ACTIVATE)
-        //    {
-        //        int wParam = m.WParam.ToInt32();
-        //        if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
-        //        {
-        //            // Bring the window to the front when activated via taskbar
-        //            SetForegroundWindow(this.Handle);
-        //        }
-        //    }
-        //}
 
         [DllImport("user32.dll")]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
