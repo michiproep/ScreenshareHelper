@@ -33,17 +33,12 @@
             "args": [
                 "publish",
                 "ScreenshareHelper.csproj",
-                // "--no-restore",
-                "--source",
-                "C:\\Users\\kirscha5\\.nuget\\packages\\",
                 "-c",
                 "Release",
                 "-r",
                 "win-x64",
-                // "net8.0-windows10.0.22000.0",
                 "-p:SelfContained=false",
                 "-p:PublishSingleFile=true",
-                // "-p:PublishReadyToRun=false",
                 "-p:IncludeNativeLibrariesForSelfExtract=false",
                 "-o",
                 "bin/publish/x64"
@@ -51,7 +46,6 @@
             "options": {
                 "cwd": "src/ScreenshareHelper"
             },
-            "isBackground": true,
             "problemMatcher": "$msCompile"
         }
     ]
