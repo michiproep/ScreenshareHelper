@@ -11,6 +11,6 @@ namespace ScreenshareHelper
         public int? ProcessID { get; set; }
 
         [Option('m', "mouse", Required = false, HelpText = "Mirror the mouse pointer.")]
-        public bool CopyMouse { get; set; }
+        public bool CopyMouse { get; set; } = true;
     }
 }
