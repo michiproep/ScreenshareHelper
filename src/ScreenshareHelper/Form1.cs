@@ -171,6 +171,11 @@ namespace ScreenshareHelper
 
         private void buttonSetCaptureArea_Click(object sender, EventArgs e)
         {
+            SetCaptureArea();
+        }
+
+        private void SetCaptureArea()
+        {
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
 
@@ -221,7 +226,7 @@ namespace ScreenshareHelper
         {
             isActive = false;
             FormBorderStyle = FormBorderStyle.None; //update CreateParams
-            this.Size = Settings.Default.CaptureSize;
+            SetCaptureArea();
 
             buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
         }
