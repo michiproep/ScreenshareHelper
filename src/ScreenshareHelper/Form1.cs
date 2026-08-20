@@ -19,6 +19,7 @@ namespace ScreenshareHelper
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.TransparencyKey = transKey;
             RestoreWindowPosition();
+            this.BackColor = Color.Black;
 
             this.MouseDown += Form1_MouseDown;
             this.SizeChanged += Form1_SizeChanged;
@@ -210,7 +211,7 @@ namespace ScreenshareHelper
         {
             isActive = true;
             FormBorderStyle = FormBorderStyle.None;//update CreateParams
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
+            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
         }
         private void Form1_Deactivate(object sender, EventArgs e)
         {
@@ -218,7 +219,7 @@ namespace ScreenshareHelper
             FormBorderStyle = FormBorderStyle.None; //update CreateParams
             this.Size = Settings.Default.CaptureSize;
 
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
+            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
