@@ -40,6 +40,14 @@ namespace ScreenshareHelper
                     else if (o.ProcessID.HasValue)
                         SnapToProcess(o.ProcessID.Value);
                     Settings.Default.CopyMouse = !o.NoMouse;
+
+                    if (!string.IsNullOrEmpty(o.Color))
+                    {
+                        if (TryParseColor(o.Color, out var color))
+                            Settings.Default.BackgroundColor = color;
+                        else
+                            Console.Error.WriteLine($"Unrecognized --color value '{o.Color}'. Use a named color (e.g. Black, DodgerBlue, Transparent) or a hex code RRGGBB/AARRGGBB (optionally prefixed with '#' or '0x').");
+                    }
                 }
                 );
 
@@ -48,6 +56,42 @@ namespace ScreenshareHelper
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new Form1());
         }
+
+        #region Color parsing
+        private static bool TryParseColor(string input, out System.Drawing.Color color)
+        {
+            color = default;
+            var s = input.Trim();
+            var hex = s.StartsWith("#") ? s.Substring(1)
+                : s.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? s.Substring(2)
+                : s;
+
+            if ((hex.Length == 6 || hex.Length == 8) && hex.All(Uri.IsHexDigit))
+            {
+                byte a = 255;
+                int offset = 0;
+                if (hex.Length == 8)
+                {
+                    a = Convert.ToByte(hex.Substring(0, 2), 16);
+                    offset = 2;
+                }
+                byte r = Convert.ToByte(hex.Substring(offset, 2), 16);
+                byte g = Convert.ToByte(hex.Substring(offset + 2, 2), 16);
+                byte b = Convert.ToByte(hex.Substring(offset + 4, 2), 16);
+                color = System.Drawing.Color.FromArgb(a, r, g, b);
+                return true;
+            }
+
+            // named .NET color, e.g. "Black", "DodgerBlue", "Transparent" (case-insensitive)
+            if (Enum.TryParse<System.Drawing.KnownColor>(s, true, out var known))
+            {
+                color = System.Drawing.Color.FromKnownColor(known);
+                return true;
+            }
+
+            return false;
+        }
+        #endregion
 
 
         #region SnapToProcess

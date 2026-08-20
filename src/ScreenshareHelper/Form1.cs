@@ -9,7 +9,7 @@ namespace ScreenshareHelper
 {
     public partial class Form1 : Form
     {
-        readonly Color transKey = Color.SaddleBrown;
+        readonly Color transKey = Color.Transparent;
         private bool isActive = true;
 
         public Form1()
@@ -19,7 +19,7 @@ namespace ScreenshareHelper
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.TransparencyKey = transKey;
             RestoreWindowPosition();
-            this.BackColor = Color.Black;
+            this.BackColor = Settings.Default.BackgroundColor;
 
             this.MouseDown += Form1_MouseDown;
             this.SizeChanged += Form1_SizeChanged;

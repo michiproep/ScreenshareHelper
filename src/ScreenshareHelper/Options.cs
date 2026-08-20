@@ -12,5 +12,8 @@ namespace ScreenshareHelper
 
         [Option("no-mouse", Required = false, HelpText = "Disable mirroring the mouse pointer.")]
         public bool NoMouse { get; set; }
+
+        [Option("color", Required = false, HelpText = "Background color: a named color (e.g. Black, DodgerBlue), a hex code RRGGBB or AARRGGBB (with optional '#' or '0x' prefix), or 'Transparent' for a fully see-through window.")]
+        public string Color { get; set; }
     }
 }
