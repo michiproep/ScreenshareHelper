@@ -78,7 +78,11 @@ namespace ScreenshareHelper
             {
                 var sizeText = $"{this.Width} × {this.Height}";
                 if (this.labelSize != null)
+                {
                     this.labelSize.Text = sizeText;
+                    this.labelSize.BringToFront();
+                    this.labelSize.Update();
+                }
             }
             catch (Exception) { }
         }
@@ -241,6 +245,8 @@ namespace ScreenshareHelper
                 while (true)
                 {
                     this.OnPaintBackground(Graphics.FromHwnd(h));
+                    // the size can change mid-drag while this loop runs on a background thread, so re-sync the label here too
+                    try { this.BeginInvoke(new Action(UpdateSizeDisplay)); } catch (Exception) { }
                     Thread.Sleep(100);
                 }
             });
