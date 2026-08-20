@@ -9,5 +9,8 @@ namespace ScreenshareHelper
 
         [Option('i', "pid", Required = false, HelpText = "Process ID to snap to at startup.", SetName = "process")]
         public int? ProcessID { get; set; }
+
+        [Option('m', "mouse", Required = false, HelpText = "Mirror the mouse pointer.")]
+        public bool CopyMouse { get; set; }
     }
 }
