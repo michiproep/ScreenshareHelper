@@ -15,11 +15,25 @@ namespace ScreenshareHelper
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>
+        [DllImport("kernel32.dll")]
+        private static extern bool AttachConsole(int dwProcessId);
+        private const int ATTACH_PARENT_PROCESS = -1;
+
         [STAThread]
         static void Main(string[] args)
         {
-            Parser.Default.ParseArguments<Options>(args).
-                WithParsed(o =>
+            // this is a WinExe with no console of its own, so attach to the caller's console and rebind stdio for --help/--version/error output.
+            if (AttachConsole(ATTACH_PARENT_PROCESS))
+            {
+                Console.SetOut(new System.IO.StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
+                Console.SetError(new System.IO.StreamWriter(Console.OpenStandardError()) { AutoFlush = true });
+            }
+
+            var parserResult = Parser.Default.ParseArguments<Options>(args);
+            if (parserResult.Tag == ParserResultType.NotParsed)
+                return;
+
+            parserResult.WithParsed(o =>
                 {
                     if (!string.IsNullOrEmpty(o.Process))
                         SnapToProcess(o.Process);
