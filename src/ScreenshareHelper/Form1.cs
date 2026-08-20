@@ -9,7 +9,7 @@ namespace ScreenshareHelper
 {
     public partial class Form1 : Form
     {
-        readonly Color transKey = Color.Transparent;
+        readonly Color transKey = Color.SaddleBrown;
         private bool isActive = true;
 
         public Form1()
@@ -19,7 +19,11 @@ namespace ScreenshareHelper
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.TransparencyKey = transKey;
             RestoreWindowPosition();
-            this.BackColor = Settings.Default.BackgroundColor;
+            var configuredColor = Settings.Default.BackgroundColor;
+            // TransparencyKey must stay an opaque sentinel (alpha=0 breaks GDI+ text rendering), so map the
+            // user-facing 'Transparent' choice onto that same sentinel instead of a real alpha=0 color.
+            this.BackColor = configuredColor == Color.Transparent ? transKey : configuredColor;
+            this.labelSize.BackColor = this.BackColor;
 
             this.MouseDown += Form1_MouseDown;
             this.SizeChanged += Form1_SizeChanged;
