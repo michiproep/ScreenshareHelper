@@ -15,5 +15,8 @@ namespace ScreenshareHelper
 
         [Option("color", Required = false, HelpText = "Background color: a named color (e.g. Black, DodgerBlue), a hex code RRGGBB or AARRGGBB (with optional '#' or '0x' prefix), or 'Transparent' for a fully see-through window.")]
         public string Color { get; set; }
+
+        [Option("no-auto-set", Required = false, HelpText = "Disable automatically setting the capture area when the window loses focus.")]
+        public bool NoAutoSet { get; set; }
     }
 }

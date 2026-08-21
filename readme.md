@@ -34,6 +34,9 @@ Use process name or better process ID (MainWindow process ID) to accomplish this
 
 -n => Process name (e.g. firefox)
 -i => PID
+--no-mouse => Disable mirroring the mouse pointer.
+--color => Background color: a named color, a hex code RRGGBB/AARRGGBB, or 'Transparent'.
+--no-auto-set => Disable automatically setting the capture area when the window loses focus.
 
 Examples
 ```

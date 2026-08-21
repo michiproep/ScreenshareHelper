@@ -226,7 +226,8 @@ namespace ScreenshareHelper
         {
             isActive = false;
             FormBorderStyle = FormBorderStyle.None; //update CreateParams
-            SetCaptureArea();
+            if (Program.AutoSetOnFocusLoss)
+                SetCaptureArea();
 
             buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
         }
