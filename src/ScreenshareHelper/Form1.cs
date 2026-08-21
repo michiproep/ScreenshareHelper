@@ -125,7 +125,7 @@ namespace ScreenshareHelper
             try
             {
                 graphics.CopyFromScreen(Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, 0, 0, Settings.Default.CaptureSize);
-                if (Settings.Default.CopyMouse)
+                if (Program.CopyMouse)
                 {
                     CopyMousePointer(graphics);
                 }

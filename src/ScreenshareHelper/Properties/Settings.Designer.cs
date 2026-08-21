@@ -85,18 +85,6 @@ namespace ScreenshareHelper.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool CopyMouse {
-            get {
-                return ((bool)(this["CopyMouse"]));
-            }
-            set {
-                this["CopyMouse"] = value;
-            }
-        }
-
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Black")]
         public global::System.Drawing.Color BackgroundColor {
             get {

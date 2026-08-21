@@ -20,6 +20,7 @@ namespace ScreenshareHelper
         private const int ATTACH_PARENT_PROCESS = -1;
 
         public static bool AutoSetOnFocusLoss = true;
+        public static bool CopyMouse = true;
 
         [STAThread]
         static void Main(string[] args)
@@ -41,7 +42,7 @@ namespace ScreenshareHelper
                         SnapToProcess(o.Process);
                     else if (o.ProcessID.HasValue)
                         SnapToProcess(o.ProcessID.Value);
-                    Settings.Default.CopyMouse = !o.NoMouse;
+                    CopyMouse = !o.NoMouse;
                     AutoSetOnFocusLoss = !o.NoAutoSet;
 
                     if (!string.IsNullOrEmpty(o.Color))
