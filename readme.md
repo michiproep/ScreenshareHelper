@@ -36,7 +36,7 @@ Use process name or better process ID (MainWindow process ID) to accomplish this
 -i => PID
 --no-mouse => Disable mirroring the mouse pointer.
 --color => Background color: a named color, a hex code RRGGBB/AARRGGBB, or 'Transparent'.
---no-auto-set => Disable automatically setting the capture area when the window loses focus.
+--auto-set => Automatically set the capture area (like clicking 'Set') when the window loses focus.
 
 Examples
 ```
