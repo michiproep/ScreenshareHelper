@@ -19,8 +19,14 @@ namespace ScreenshareHelper
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.TransparencyKey = transKey;
             RestoreWindowPosition();
+            var configuredColor = Settings.Default.BackgroundColor;
+            // TransparencyKey must stay an opaque sentinel (alpha=0 breaks GDI+ text rendering), so map the
+            // user-facing 'Transparent' choice onto that same sentinel instead of a real alpha=0 color.
+            this.BackColor = configuredColor == Color.Transparent ? transKey : configuredColor;
+            this.labelSize.BackColor = this.BackColor;
 
             this.MouseDown += Form1_MouseDown;
+            this.SizeChanged += Form1_SizeChanged;
         }
 
         #region Drag/Move the form
@@ -58,9 +64,27 @@ namespace ScreenshareHelper
         protected void OnPaintBackground(Graphics g)
         {
             if (isActive)
-                g.Clear(transKey);
+            {
+                g.Clear(this.BackColor);
+            }
             else
                 paint(g);
+        }
+
+        private void Form1_SizeChanged(object sender, EventArgs e)
+        {
+            UpdateSizeDisplay();
+        }
+
+        private void UpdateSizeDisplay()
+        {
+            try
+            {
+                var sizeText = $"{this.Width} × {this.Height}";
+                if (this.labelSize != null)
+                    this.labelSize.Text = sizeText;
+            }
+            catch (Exception) { }
         }
 
         #region Cursor
@@ -101,7 +125,7 @@ namespace ScreenshareHelper
             try
             {
                 graphics.CopyFromScreen(Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, 0, 0, Settings.Default.CaptureSize);
-                if (Settings.Default.CopyMouse)
+                if (Program.CopyMouse)
                 {
                     CopyMousePointer(graphics);
                 }
@@ -147,10 +171,14 @@ namespace ScreenshareHelper
 
         private void buttonSetCaptureArea_Click(object sender, EventArgs e)
         {
+            SetCaptureArea();
+        }
+
+        private void SetCaptureArea()
+        {
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
 
-            // Send window to the background
             setWindowToBackground();
         }
 
@@ -192,15 +220,16 @@ namespace ScreenshareHelper
         {
             isActive = true;
             FormBorderStyle = FormBorderStyle.None;//update CreateParams
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
+            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
         }
         private void Form1_Deactivate(object sender, EventArgs e)
         {
             isActive = false;
             FormBorderStyle = FormBorderStyle.None; //update CreateParams
-            this.Size = Settings.Default.CaptureSize;
+            if (Program.AutoSetOnFocusLoss)
+                SetCaptureArea();
 
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
+            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -227,6 +256,7 @@ namespace ScreenshareHelper
             });
             t.IsBackground = true;
             t.Start();
+            UpdateSizeDisplay();
             
         }
         protected override void OnShown(EventArgs e)
