@@ -39,4 +39,4 @@ Priority: 🔴 high · 🟡 medium · 🟢 nice to have
 - [x] Configurable frame rate (`--fps`, default 30)
 - [x] Modern capture API: `--capture dxgi|gdi|wgc` (default DXGI Desktop Duplication, automatic fallback to GDI), `--stats` overlay
 - [x] Claude workspace (`CLAUDE.md`) and automatic issue triage
-- [x] Release workflow: one-click release, version in exe, generated release notes
+- [x] Release workflow: one-click release, version in exe, release notes from commits since the last release

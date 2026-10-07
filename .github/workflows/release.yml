@@ -117,11 +117,42 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # tags and history for the release notes
+
       - name: Download Artifacts
         uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
+
+      # Notes are built from commits (not PRs), because most changes are pushed to master directly.
+      # Final releases compare against the previous final release, pre-releases against the previous tag.
+      - name: Build Release Notes
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          TAGS=$(git -c versionsort.suffix=- tag --sort=-v:refname --merged HEAD | grep -vxF "$VERSION" || true)
+          if [[ "$PRERELEASE" != "true" ]]; then
+            TAGS=$(echo "$TAGS" | grep -v -- '-' || true)
+          fi
+          PREV=$(echo "$TAGS" | head -n1)
+
+          {
+            echo "## What's Changed"
+            if [[ -n "$PREV" ]]; then
+              git log --no-merges --pretty='* %s (%h)' "$PREV..HEAD"
+              echo
+              echo "**Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$PREV...$VERSION"
+            else
+              git log --no-merges --pretty='* %s (%h)'
+            fi
+          } > release-notes.md
+          cat release-notes.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
@@ -130,6 +161,6 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: Release ${{ needs.version.outputs.version }}
           prerelease: ${{ needs.version.outputs.prerelease }}
-          generate_release_notes: true
+          body_path: release-notes.md
           files: dist/*.zip
           fail_on_unmatched_files: true
