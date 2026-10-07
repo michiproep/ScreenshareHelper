@@ -7,12 +7,12 @@ So, I came up with this little tool. It's not perfect yet but it works for me.
 I also use FancyZones from Microsoft's PowerToys which - together with this tool - makes it quite easy to get this done.
 
 ## Prerequisites
-I built this tool on .net 8 windows forms, so you should install the [.net 8 runtime](https://dotnet.microsoft.com/download/dotnet/8.0) up front.
+This tool is built on .NET 10 Windows Forms, so you need the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) installed up front.
 
 ## Download
 
-[zip](https://github.com/michiproep/ScreenshareHelper/releases)
-Either use x86 or x64 precompiled verion.
+Download the latest zip from the [releases page](https://github.com/michiproep/ScreenshareHelper/releases/latest).
+Use `win-x64` (most PCs) or `win-x86`.
 
 ## How to use the tool?
 1. Start ScreenshareHelper.exe => Transparent window appears
