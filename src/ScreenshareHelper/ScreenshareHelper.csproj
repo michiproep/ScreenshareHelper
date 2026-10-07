@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <!-- native virtual camera source (x64), built separately with MSBuild, see ScreenshareHelper.VirtualCamera.vcxproj -->
-  <ItemGroup Condition="Exists('..\ScreenshareHelper.VirtualCamera\bin\x64\Release\ScreenshareHelper.VirtualCamera.dll')">
+  <ItemGroup Condition="'$(RuntimeIdentifier)' != 'win-x86' And Exists('..\ScreenshareHelper.VirtualCamera\bin\x64\Release\ScreenshareHelper.VirtualCamera.dll')">
     <None Include="..\ScreenshareHelper.VirtualCamera\bin\x64\Release\ScreenshareHelper.VirtualCamera.dll" Link="ScreenshareHelper.VirtualCamera.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 

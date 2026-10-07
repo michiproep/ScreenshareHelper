@@ -40,13 +40,23 @@ Use process name or better process ID (MainWindow process ID) to accomplish this
 --capture => Capture method: `dxgi` (Desktop Duplication, default), `gdi` (classic, falls back to it automatically if dxgi fails) or `wgc` (Windows.Graphics.Capture).
 --fps => Target frames per second (default 30).
 --stats => Show capture method, frame rate and capture time in the window.
---virtual-camera => *Experimental, Windows 11 x64:* also publish the capture area as a webcam named "ScreenshareHelper" (1920×1080, scaled with black bars). Needs a one-time registration from an elevated prompt: `regsvr32 ScreenshareHelper.VirtualCamera.dll` (in the app folder). The camera exists while the app runs.
+--virtual-camera => *Windows 11, x64:* also publish the capture area as a webcam named "ScreenshareHelper" (see [Virtual camera](#virtual-camera)).
+--install-camera / --uninstall-camera => Set up or remove the virtual camera and exit (asks for administrator rights).
 
 Examples
 ```
 ScreenshareHelper.exe -n notepad2
 ScreenshareHelper.exe -i 12345
 ```
+## Virtual camera
+*Experimental, Windows 11, x64 package only.* With `--virtual-camera` the tool additionally shows the capture area as a webcam called **ScreenshareHelper** (1920×1080, scaled with black bars, including the mouse pointer). Select it as camera in Teams, Zoom or the Windows Camera app. The camera exists while the tool is running.
+
+The first time you use it, the tool offers a one-time setup: after confirming the Windows admin prompt it copies the camera component (`ScreenshareHelper.VirtualCamera.dll`) to `C:\Program Files\ScreenshareHelper\VirtualCamera` and registers it there. Windows' camera service loads it from that protected folder. After an update with a changed camera component, the tool offers to update it the same way.
+
+To remove it: `ScreenshareHelper.exe --uninstall-camera`.
+
+> Camera images are compressed more than screen sharing, so small text may be less sharp than when sharing the window.
+
 ## Donate
 If you like the tool, just [Paypal.me](https://paypal.me/mlproe?locale.x=de_DE)
 

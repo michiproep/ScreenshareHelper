@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -45,10 +45,15 @@ namespace ScreenshareHelper.Capture
 
             try
             {
-                if (VirtualCamera_IsRegistered() != 0)
+                switch (VirtualCameraSetup.GetStatus())
                 {
-                    error = $"Virtual camera not registered - run once as admin: regsvr32 \"{Path.Combine(AppContext.BaseDirectory, NativeDll)}\"";
-                    return null;
+                    case VirtualCameraSetupStatus.NotSupported:
+                        error = $"Virtual camera not available: needs Windows 11 x64 and {NativeDll} next to the exe";
+                        return null;
+                    case VirtualCameraSetupStatus.NotInstalled:
+                    case VirtualCameraSetupStatus.NeedsUpdate:
+                        error = $"Virtual camera not set up - restart and confirm the setup, or run: ScreenshareHelper.exe {VirtualCameraSetup.InstallArgument}";
+                        return null;
                 }
 
                 int hr = VirtualCamera_Start(CameraName);
@@ -197,9 +202,6 @@ namespace ScreenshareHelper.Capture
         }
 
         #region Native
-
-        [DllImport(NativeDll)]
-        private static extern int VirtualCamera_IsRegistered();
 
         [DllImport(NativeDll, CharSet = CharSet.Unicode)]
         private static extern int VirtualCamera_Start(string friendlyName);

@@ -82,6 +82,15 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # native virtual camera component, x64 only (the Windows camera service is 64-bit)
+      - name: Setup MSBuild
+        if: matrix.rid == 'win-x64'
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Build Virtual Camera
+        if: matrix.rid == 'win-x64'
+        run: msbuild src/ScreenshareHelper.VirtualCamera/ScreenshareHelper.VirtualCamera.vcxproj -p:Configuration=Release -p:Platform=x64 -m -nologo
+
       - name: Publish
         shell: pwsh
         env:
@@ -94,6 +103,11 @@ jobs:
           -p:Version=$env:VERSION
           -p:DebugType=none
           -o publish/$env:RID
+
+      - name: Check Virtual Camera in x64 package
+        if: matrix.rid == 'win-x64'
+        shell: pwsh
+        run: if (-not (Test-Path "publish/win-x64/ScreenshareHelper.VirtualCamera.dll")) { throw "ScreenshareHelper.VirtualCamera.dll missing in the x64 package" }
 
       - name: Create ZIP
         shell: pwsh
