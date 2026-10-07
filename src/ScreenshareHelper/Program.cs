@@ -24,6 +24,7 @@ namespace ScreenshareHelper
         public static Capture.CaptureMethod CaptureMethod = Capture.CaptureMethod.Dxgi;
         public static int Fps = 30;
         public static bool ShowStats = false;
+        public static bool VirtualCamera = false;
 
         [STAThread]
         static void Main(string[] args)
@@ -45,6 +46,14 @@ namespace ScreenshareHelper
             if (parserResult.Tag == ParserResultType.NotParsed)
                 return;
 
+            // one-time virtual camera setup/removal (elevates itself), no UI
+            var options = ((Parsed<Options>)parserResult).Value;
+            if (options.InstallCamera || options.UninstallCamera)
+            {
+                Environment.ExitCode = Capture.VirtualCameraSetup.RunSetupCommand(options.InstallCamera);
+                return;
+            }
+
             parserResult.WithParsed(o =>
                 {
                     if (!string.IsNullOrEmpty(o.Process))
@@ -56,6 +65,7 @@ namespace ScreenshareHelper
                     CaptureMethod = o.CaptureMethod;
                     Fps = Math.Clamp(o.Fps, 1, 120);
                     ShowStats = o.Stats;
+                    VirtualCamera = o.VirtualCamera;
 
                     if (!string.IsNullOrEmpty(o.Color))
                     {
@@ -70,6 +80,8 @@ namespace ScreenshareHelper
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            if (VirtualCamera)
+                Capture.VirtualCameraSetup.EnsureInstalledInteractive(); // asks once, elevates via UAC
             var form = new Form1();
             Application.Run(form);
             form.ReleaseCaptureResources();

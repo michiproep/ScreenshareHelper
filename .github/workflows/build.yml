@@ -2,7 +2,7 @@ name: .NET
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, 'experiment/**' ]
   pull_request:
     branches: [ master ]
 
@@ -23,7 +23,16 @@ jobs:
       uses: actions/setup-dotnet@v6
       with:
         dotnet-version: 10.0.x
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v3
+    - name: Build Virtual Camera
+      run: msbuild ScreenshareHelper.VirtualCamera/ScreenshareHelper.VirtualCamera.vcxproj -p:Configuration=Release -p:Platform=x64 -m -nologo
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore -c Release
+    - name: Publish x64 and check package
+      shell: pwsh
+      run: |
+        dotnet publish ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x64 -p:SelfContained=false -p:PublishSingleFile=true -p:DebugType=none -o ../publish
+        if (-not (Test-Path ../publish/ScreenshareHelper.VirtualCamera.dll)) { throw "ScreenshareHelper.VirtualCamera.dll missing in the x64 package" }

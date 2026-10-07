@@ -1,0 +1,8 @@
+EXPORTS
+    DllGetClassObject PRIVATE
+    DllCanUnloadNow PRIVATE
+    DllRegisterServer PRIVATE
+    DllUnregisterServer PRIVATE
+    VirtualCamera_IsRegistered
+    VirtualCamera_Start
+    VirtualCamera_Stop

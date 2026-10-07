@@ -16,6 +16,7 @@ Priority: 🔴 high · 🟡 medium · 🟢 nice to have
 - [ ] 🟡 **Visible capture border**: show a thin frame around the capture area (not captured itself) so you can see what is shared.
 - [ ] 🟡 **Global hotkey** to (re)set the capture area or toggle mouse mirroring without focusing the window.
 - [ ] 🟡 **Capture follow-ups**: exe grew 0.6 MB → 28 MB, almost entirely the WinRT projection for WGC – drop WGC (DXGI alone is small) or keep it optional; DXGI/WGC only capture the monitor under the area center (no areas spanning two monitors) and ignore rotated monitors; double-buffered staging texture to cut the ~5 ms readback stall; WinForms timer caps at ~20–30 ticks/s.
+- [ ] 🟡 **Virtual camera follow-ups**: autostart with Windows (Run key) + tray icon so the camera is always available; feedback from the pre-release (Teams image quality, other apps); code signing for the camera DLL.
 - [ ] 🟢 **Tray icon** with menu (Set, mouse on/off, color, exit).
 - [ ] 🟢 **Highlight mouse clicks** in the mirrored image (helpful in presentations).
 - [ ] 🟢 **Profiles**: save/restore several named capture areas (e.g. `--profile left-half`).
@@ -35,6 +36,7 @@ Priority: 🔴 high · 🟡 medium · 🟢 nice to have
 - [ ] 🟢 README: fix typos, add a GIF/screenshot of the tool in action.
 
 ## Done
+- [x] Virtual camera (`--virtual-camera`, Windows 11 x64): native Media Foundation source, one-time setup to Program Files via UAC (`--install-camera` / `--uninstall-camera`), built in CI
 - [x] GDI leak in render loop (timer-driven rendering instead of endless paint thread)
 - [x] Configurable frame rate (`--fps`, default 30)
 - [x] Modern capture API: `--capture dxgi|gdi|wgc` (default DXGI Desktop Duplication, automatic fallback to GDI), `--stats` overlay

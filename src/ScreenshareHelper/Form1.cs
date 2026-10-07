@@ -19,6 +19,8 @@ namespace ScreenshareHelper
         private readonly System.Windows.Forms.Timer captureTimer = new System.Windows.Forms.Timer();
         private Point lastCursorPos;
         private string captureError;
+        private VirtualCameraOutput virtualCamera;
+        private string cameraError;
         private bool closing;
         private readonly CaptureStats stats = new CaptureStats();
 
@@ -156,6 +158,9 @@ namespace ScreenshareHelper
                 FallBackToGdi(Program.CaptureMethod.ToString(), ex);
             }
 
+            if (Program.VirtualCamera)
+                virtualCamera = VirtualCameraOutput.TryStart(out cameraError);
+
             captureTimer.Interval = Math.Max(1, 1000 / Program.Fps);
             captureTimer.Tick += CaptureTimer_Tick;
             captureTimer.Start();
@@ -171,7 +176,8 @@ namespace ScreenshareHelper
 
         private void CaptureTimer_Tick(object sender, EventArgs e)
         {
-            if (isActive || closing || capture == null)
+            // the window only needs frames while inactive, the virtual camera always
+            if ((isActive && virtualCamera == null) || closing || capture == null)
                 return;
 
             var area = new Rectangle(Settings.Default.CaptureLocation, Settings.Default.CaptureSize);
@@ -201,7 +207,21 @@ namespace ScreenshareHelper
             var cursorPos = Cursor.Position;
             bool cursorMoved = Program.CopyMouse && cursorPos != lastCursorPos;
             lastCursorPos = cursorPos;
-            if (changed || cursorMoved || Program.ShowStats || captureError != null)
+
+            if (virtualCamera != null && (changed || cursorMoved || !virtualCamera.Connected))
+            {
+                try
+                {
+                    virtualCamera.Write(frame, area, Program.CopyMouse);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                    cameraError = $"Virtual camera: {ex.Message}";
+                }
+            }
+
+            if (!isActive && (changed || cursorMoved || Program.ShowStats || captureError != null || cameraError != null))
                 Invalidate();
         }
 
@@ -222,7 +242,7 @@ namespace ScreenshareHelper
                 {
                     CopyMousePointer(graphics);
                 }
-                if (Program.ShowStats || captureError != null)
+                if (Program.ShowStats || captureError != null || cameraError != null)
                     DrawStats(graphics);
             }
             catch (Exception ex)
@@ -234,8 +254,11 @@ namespace ScreenshareHelper
         private void DrawStats(Graphics graphics)
         {
             var text = Program.ShowStats ? $"{capture?.Name} | {stats}" : "";
-            if (captureError != null)
-                text += (text.Length > 0 ? Environment.NewLine : "") + captureError;
+            if (Program.ShowStats && virtualCamera != null)
+                text += Environment.NewLine + $"Virtual camera '{VirtualCameraOutput.CameraName}': " + (virtualCamera.Connected ? "in use" : "waiting for an app to open it");
+            foreach (var error in new[] { captureError, cameraError })
+                if (error != null)
+                    text += (text.Length > 0 ? Environment.NewLine : "") + error;
 
             using var font = new Font(FontFamily.GenericMonospace, 10f);
             var size = graphics.MeasureString(text, font);
@@ -382,6 +405,8 @@ namespace ScreenshareHelper
                 Debug.WriteLine(ex);
             }
             capture = null;
+            virtualCamera?.Dispose();
+            virtualCamera = null;
             frame?.Dispose();
             frame = null;
         }
