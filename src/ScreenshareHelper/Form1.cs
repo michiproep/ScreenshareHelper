@@ -73,9 +73,18 @@ namespace ScreenshareHelper
         #endregion
         protected override void OnPaintBackground(PaintEventArgs e)
         {
-            // while inactive the whole client area is covered by the captured frame
             if (isActive || frame == null)
+            {
                 base.OnPaintBackground(e);
+                return;
+            }
+
+            // the window can be larger than the capture area: keep the background (usually transparent)
+            // there like before, but don't clear below the frame to avoid flicker
+            using var outside = new Region(ClientRectangle);
+            outside.Exclude(new Rectangle(Point.Empty, frame.Size));
+            using var brush = new SolidBrush(BackColor);
+            e.Graphics.FillRegion(brush, outside);
         }
 
         protected override void OnPaint(PaintEventArgs e)
