@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Windows.Forms;
+using ScreenshareHelper.Capture;
 using ScreenshareHelper.Properties;
 
 namespace ScreenshareHelper
@@ -12,9 +14,18 @@ namespace ScreenshareHelper
         readonly Color transKey = Color.SaddleBrown;
         private bool isActive = true;
 
+        private IScreenCapture capture;
+        private Bitmap frame;
+        private readonly System.Windows.Forms.Timer captureTimer = new System.Windows.Forms.Timer();
+        private Point lastCursorPos;
+        private string captureError;
+        private bool closing;
+        private readonly CaptureStats stats = new CaptureStats();
+
         public Form1()
         {
             InitializeComponent();
+            DoubleBuffered = true;
             FormBorderStyle = FormBorderStyle.None;
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.TransparencyKey = transKey;
@@ -61,14 +72,27 @@ namespace ScreenshareHelper
             }
         }
         #endregion
-        protected void OnPaintBackground(Graphics g)
+        protected override void OnPaintBackground(PaintEventArgs e)
         {
-            if (isActive)
+            if (isActive || frame == null)
             {
-                g.Clear(this.BackColor);
+                base.OnPaintBackground(e);
+                return;
             }
-            else
-                paint(g);
+
+            // the window can be larger than the capture area: keep the background (usually transparent)
+            // there like before, but don't clear below the frame to avoid flicker
+            using var outside = new Region(ClientRectangle);
+            outside.Exclude(new Rectangle(Point.Empty, frame.Size));
+            using var brush = new SolidBrush(BackColor);
+            e.Graphics.FillRegion(brush, outside);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            if (!isActive)
+                paint(e.Graphics);
         }
 
         private void Form1_SizeChanged(object sender, EventArgs e)
@@ -120,19 +144,105 @@ namespace ScreenshareHelper
         #endregion Cursor
 
 
+        #region Capture
+        private void StartCapture()
+        {
+            try
+            {
+                capture = ScreenCaptureFactory.Create(Program.CaptureMethod);
+            }
+            catch (Exception ex)
+            {
+                FallBackToGdi(Program.CaptureMethod.ToString(), ex);
+            }
+
+            captureTimer.Interval = Math.Max(1, 1000 / Program.Fps);
+            captureTimer.Tick += CaptureTimer_Tick;
+            captureTimer.Start();
+        }
+
+        private void FallBackToGdi(string failedMethod, Exception ex)
+        {
+            Debug.WriteLine($"Capture method {failedMethod} failed: {ex}");
+            captureError = $"{failedMethod} failed ({ex.GetType().Name}: {ex.Message}) - using GDI";
+            capture?.Dispose();
+            capture = new GdiScreenCapture();
+        }
+
+        private void CaptureTimer_Tick(object sender, EventArgs e)
+        {
+            if (isActive || closing || capture == null)
+                return;
+
+            var area = new Rectangle(Settings.Default.CaptureLocation, Settings.Default.CaptureSize);
+            if (area.Width <= 0 || area.Height <= 0)
+                return;
+
+            if (frame == null || frame.Size != area.Size)
+            {
+                frame?.Dispose();
+                frame = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppRgb);
+            }
+
+            bool changed;
+            long start = Stopwatch.GetTimestamp();
+            try
+            {
+                changed = capture.Capture(area, frame);
+            }
+            catch (Exception ex)
+            {
+                FallBackToGdi(capture.Name, ex);
+                return;
+            }
+            stats.Add(Stopwatch.GetElapsedTime(start), changed);
+
+            // only repaint if the image or the mouse pointer changed
+            var cursorPos = Cursor.Position;
+            bool cursorMoved = Program.CopyMouse && cursorPos != lastCursorPos;
+            lastCursorPos = cursorPos;
+            if (changed || cursorMoved || Program.ShowStats || captureError != null)
+                Invalidate();
+        }
+
         private void paint(Graphics graphics)
         {
             try
             {
-                graphics.CopyFromScreen(Settings.Default.CaptureLocation.X, Settings.Default.CaptureLocation.Y, 0, 0, Settings.Default.CaptureSize);
+                if (frame != null)
+                {
+                    // draw pixel by pixel: DrawImageUnscaled would scale by the bitmap's DPI (= system DPI) vs. the window DPI
+                    var rect = new Rectangle(Point.Empty, frame.Size);
+                    graphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
+                    graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                    graphics.DrawImage(frame, rect, rect, GraphicsUnit.Pixel);
+                    graphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
+                }
                 if (Program.CopyMouse)
                 {
                     CopyMousePointer(graphics);
                 }
+                if (Program.ShowStats || captureError != null)
+                    DrawStats(graphics);
             }
-            catch (Exception)
-            { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
         }
+
+        private void DrawStats(Graphics graphics)
+        {
+            var text = Program.ShowStats ? $"{capture?.Name} | {stats}" : "";
+            if (captureError != null)
+                text += (text.Length > 0 ? Environment.NewLine : "") + captureError;
+
+            using var font = new Font(FontFamily.GenericMonospace, 10f);
+            var size = graphics.MeasureString(text, font);
+            graphics.FillRectangle(Brushes.Black, 0, 0, size.Width + 6, size.Height + 4);
+            graphics.DrawString(text, font, Brushes.Yellow, 3, 2);
+        }
+        #endregion
 
         private static void CopyMousePointer(Graphics graphics)
         {
@@ -216,25 +326,64 @@ namespace ScreenshareHelper
 
         
 
+        /// <summary>
+        /// Adds/removes the sizing border (see CreateParams) without changing the window bounds;
+        /// otherwise WinForms keeps the client size and the window no longer matches the capture area.
+        /// </summary>
+        private void UpdateSizeBox()
+        {
+            var bounds = Bounds;
+            FormBorderStyle = FormBorderStyle.None; //update CreateParams
+            Bounds = bounds;
+        }
+
         private void Form1_Activated(object sender, EventArgs e)
         {
             isActive = true;
-            FormBorderStyle = FormBorderStyle.None;//update CreateParams
+            UpdateSizeBox();
             buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
+            Invalidate();
         }
         private void Form1_Deactivate(object sender, EventArgs e)
         {
             isActive = false;
-            FormBorderStyle = FormBorderStyle.None; //update CreateParams
+            if (closing)
+                return;
+            UpdateSizeBox();
             if (Program.AutoSetOnFocusLoss)
                 SetCaptureArea();
+            else if (Settings.Default.CaptureSize.Width > 0 && Settings.Default.CaptureSize.Height > 0)
+                Size = Settings.Default.CaptureSize; // show exactly the capture area, whether the window was resized larger or smaller
 
             buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
+            Invalidate();
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            closing = true;
             SaveWindowPosition();
+            captureTimer.Stop();
+        }
+
+        /// <summary>
+        /// Releases the capture resources. Called by Program after Application.Run returned: WinRT/COM calls
+        /// (e.g. closing a Windows.Graphics.Capture session) are not allowed while WM_CLOSE is being handled
+        /// as part of an input-synchronous call (RPC_E_CANTCALLOUT_ININPUTSYNCCALL when clicking "Close App").
+        /// </summary>
+        public void ReleaseCaptureResources()
+        {
+            try
+            {
+                capture?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+            capture = null;
+            frame?.Dispose();
+            frame = null;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -245,17 +394,7 @@ namespace ScreenshareHelper
                 SetForegroundWindow(currentWindow); // Re-focus it, removing focus from our window
             }));
 
-            var h = this.Handle;
-            Thread t = new Thread(() =>
-            {
-                while (true)
-                {
-                    this.OnPaintBackground(Graphics.FromHwnd(h));
-                    Thread.Sleep(100);
-                }
-            });
-            t.IsBackground = true;
-            t.Start();
+            StartCapture();
             UpdateSizeDisplay();
             
         }

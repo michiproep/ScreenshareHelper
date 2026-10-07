@@ -5,8 +5,9 @@ Small Windows Forms tool (.NET 10, `net10.0-windows`) that mirrors a chosen scre
 ## Layout
 - `src/ScreenshareHelper.sln` – solution (single project, no tests yet)
 - `src/ScreenshareHelper/Program.cs` – entry point, CLI parsing (CommandLineParser), `--color` parsing, SnapToProcess via Win32/DWM
-- `src/ScreenshareHelper/Options.cs` – command line options (`-n`, `-i`, `--no-mouse`, `--color`, `--auto-set`)
-- `src/ScreenshareHelper/Form1.cs` – the capture window: BitBlt-based painting, mouse pointer mirroring, "Set" button, position persistence
+- `src/ScreenshareHelper/Options.cs` – command line options (`-n`, `-i`, `--no-mouse`, `--color`, `--auto-set`, `--capture`, `--fps`, `--stats`)
+- `src/ScreenshareHelper/Form1.cs` – the capture window: timer-driven rendering, mouse pointer mirroring, "Set" button, position persistence
+- `src/ScreenshareHelper/Capture/` – capture methods behind `IScreenCapture`: DXGI Desktop Duplication (default), GDI, Windows.Graphics.Capture (Vortice.Direct3D11 + WinRT interop)
 - `src/ScreenshareHelper/Properties/Settings.settings` – user settings (capture area, window position, background color); keep `Settings.Designer.cs` in sync
 - `.github/workflows/` – `build.yml` (CI on push/PR), `release.yml` (publish + GitHub Release on tag), `claude-issue-triage.yml` (Claude comments new issues), `claude.yml` (@claude mentions), `claude-code-review.yml` (PR review)
 
@@ -14,7 +15,7 @@ Small Windows Forms tool (.NET 10, `net10.0-windows`) that mirrors a chosen scre
 ```
 dotnet build src
 dotnet run --project src/ScreenshareHelper
-dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true
+dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x64 -p:SelfContained=false -p:PublishSingleFile=true
 ```
 Windows only – the app uses WinForms and P/Invoke (user32, gdi32, dwmapi, kernel32).
 
