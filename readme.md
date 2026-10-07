@@ -40,6 +40,7 @@ Use process name or better process ID (MainWindow process ID) to accomplish this
 --capture => Capture method: `dxgi` (Desktop Duplication, default), `gdi` (classic, falls back to it automatically if dxgi fails) or `wgc` (Windows.Graphics.Capture).
 --fps => Target frames per second (default 30).
 --stats => Show capture method, frame rate and capture time in the window.
+--virtual-camera => *Experimental, Windows 11 x64:* also publish the capture area as a webcam named "ScreenshareHelper" (1920×1080, scaled with black bars). Needs a one-time registration from an elevated prompt: `regsvr32 ScreenshareHelper.VirtualCamera.dll` (in the app folder). The camera exists while the app runs.
 
 Examples
 ```

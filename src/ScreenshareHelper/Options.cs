@@ -25,6 +25,9 @@ namespace ScreenshareHelper
         [Option("fps", Required = false, Default = 30, HelpText = "Target frames per second (1-120).")]
         public int Fps { get; set; }
 
+        [Option("virtual-camera", Required = false, HelpText = "Also publish the capture area as virtual camera 'ScreenshareHelper' (Windows 11, x64, one-time registration with regsvr32 as admin).")]
+        public bool VirtualCamera { get; set; }
+
         [Option("stats", Required = false, HelpText = "Show capture method, frame rate and capture time in the window.")]
         public bool Stats { get; set; }
     }

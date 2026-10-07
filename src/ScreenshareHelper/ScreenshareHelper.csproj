@@ -16,6 +16,11 @@
     <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
   </ItemGroup>
 
+  <!-- native virtual camera source (x64), built separately with MSBuild, see ScreenshareHelper.VirtualCamera.vcxproj -->
+  <ItemGroup Condition="Exists('..\ScreenshareHelper.VirtualCamera\bin\x64\Release\ScreenshareHelper.VirtualCamera.dll')">
+    <None Include="..\ScreenshareHelper.VirtualCamera\bin\x64\Release\ScreenshareHelper.VirtualCamera.dll" Link="ScreenshareHelper.VirtualCamera.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Update="Properties\Settings.Designer.cs">
       <DesignTimeSharedInput>True</DesignTimeSharedInput>

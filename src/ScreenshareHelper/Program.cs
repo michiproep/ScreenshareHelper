@@ -24,6 +24,7 @@ namespace ScreenshareHelper
         public static Capture.CaptureMethod CaptureMethod = Capture.CaptureMethod.Dxgi;
         public static int Fps = 30;
         public static bool ShowStats = false;
+        public static bool VirtualCamera = false;
 
         [STAThread]
         static void Main(string[] args)
@@ -56,6 +57,7 @@ namespace ScreenshareHelper
                     CaptureMethod = o.CaptureMethod;
                     Fps = Math.Clamp(o.Fps, 1, 120);
                     ShowStats = o.Stats;
+                    VirtualCamera = o.VirtualCamera;
 
                     if (!string.IsNullOrEmpty(o.Color))
                     {
