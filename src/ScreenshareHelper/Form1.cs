@@ -325,17 +325,28 @@ namespace ScreenshareHelper
 
         
 
+        /// <summary>
+        /// Adds/removes the sizing border (see CreateParams) without changing the window bounds;
+        /// otherwise WinForms keeps the client size and the window no longer matches the capture area.
+        /// </summary>
+        private void UpdateSizeBox()
+        {
+            var bounds = Bounds;
+            FormBorderStyle = FormBorderStyle.None; //update CreateParams
+            Bounds = bounds;
+        }
+
         private void Form1_Activated(object sender, EventArgs e)
         {
             isActive = true;
-            FormBorderStyle = FormBorderStyle.None;//update CreateParams
+            UpdateSizeBox();
             buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
             Invalidate();
         }
         private void Form1_Deactivate(object sender, EventArgs e)
         {
             isActive = false;
-            FormBorderStyle = FormBorderStyle.None; //update CreateParams
+            UpdateSizeBox();
             if (Program.AutoSetOnFocusLoss)
                 SetCaptureArea();
 
