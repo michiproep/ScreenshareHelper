@@ -8,7 +8,7 @@ Small Windows Forms tool (.NET 10, `net10.0-windows`) that mirrors a chosen scre
 - `src/ScreenshareHelper/Options.cs` – command line options (`-n`, `-i`, `--no-mouse`, `--color`, `--auto-set`)
 - `src/ScreenshareHelper/Form1.cs` – the capture window: BitBlt-based painting, mouse pointer mirroring, "Set" button, position persistence
 - `src/ScreenshareHelper/Properties/Settings.settings` – user settings (capture area, window position, background color); keep `Settings.Designer.cs` in sync
-- `.github/workflows/` – `build.yml` (CI on push/PR), `release.yml` (publish + GitHub Release on tag), `claude-issue-triage.yml`
+- `.github/workflows/` – `build.yml` (CI on push/PR), `release.yml` (publish + GitHub Release on tag), `claude-issue-triage.yml` (Claude comments new issues), `claude.yml` (@claude mentions), `claude-code-review.yml` (PR review)
 
 ## Build & run
 ```
