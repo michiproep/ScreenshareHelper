@@ -349,6 +349,8 @@ namespace ScreenshareHelper
             UpdateSizeBox();
             if (Program.AutoSetOnFocusLoss)
                 SetCaptureArea();
+            else if (Settings.Default.CaptureSize.Width > 0 && Settings.Default.CaptureSize.Height > 0)
+                Size = Settings.Default.CaptureSize; // show exactly the capture area, whether the window was resized larger or smaller
 
             buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
             Invalidate();
