@@ -19,6 +19,7 @@ namespace ScreenshareHelper
         private readonly System.Windows.Forms.Timer captureTimer = new System.Windows.Forms.Timer();
         private Point lastCursorPos;
         private string captureError;
+        private bool closing;
         private readonly CaptureStats stats = new CaptureStats();
 
         public Form1()
@@ -170,7 +171,7 @@ namespace ScreenshareHelper
 
         private void CaptureTimer_Tick(object sender, EventArgs e)
         {
-            if (isActive)
+            if (isActive || closing || capture == null)
                 return;
 
             var area = new Rectangle(Settings.Default.CaptureLocation, Settings.Default.CaptureSize);
@@ -346,6 +347,8 @@ namespace ScreenshareHelper
         private void Form1_Deactivate(object sender, EventArgs e)
         {
             isActive = false;
+            if (closing)
+                return;
             UpdateSizeBox();
             if (Program.AutoSetOnFocusLoss)
                 SetCaptureArea();
@@ -358,10 +361,19 @@ namespace ScreenshareHelper
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            closing = true;
             SaveWindowPosition();
             captureTimer.Stop();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            base.OnFormClosed(e);
+            // dispose only after the window is gone: Deactivate/Paint can still run while closing
             capture?.Dispose();
+            capture = null;
             frame?.Dispose();
+            frame = null;
         }
 
         private void Form1_Load(object sender, EventArgs e)
