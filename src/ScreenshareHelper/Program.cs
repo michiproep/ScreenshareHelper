@@ -1,4 +1,4 @@
-using CommandLine;
+﻿using CommandLine;
 using ScreenshareHelper.Properties;
 using System;
 using System.Collections.Generic;
@@ -21,6 +21,9 @@ namespace ScreenshareHelper
 
         public static bool AutoSetOnFocusLoss = false;
         public static bool CopyMouse = true;
+        public static Capture.CaptureMethod CaptureMethod = Capture.CaptureMethod.Gdi;
+        public static int Fps = 30;
+        public static bool ShowStats = false;
 
         [STAThread]
         static void Main(string[] args)
@@ -32,7 +35,13 @@ namespace ScreenshareHelper
                 Console.SetError(new System.IO.StreamWriter(Console.OpenStandardError()) { AutoFlush = true });
             }
 
-            var parserResult = Parser.Default.ParseArguments<Options>(args);
+            // like Parser.Default, but accept e.g. "--capture wgc" in any casing
+            using var parser = new Parser(with =>
+            {
+                with.HelpWriter = Console.Error;
+                with.CaseInsensitiveEnumValues = true;
+            });
+            var parserResult = parser.ParseArguments<Options>(args);
             if (parserResult.Tag == ParserResultType.NotParsed)
                 return;
 
@@ -44,6 +53,9 @@ namespace ScreenshareHelper
                         SnapToProcess(o.ProcessID.Value);
                     CopyMouse = !o.NoMouse;
                     AutoSetOnFocusLoss = o.AutoSet;
+                    CaptureMethod = o.CaptureMethod;
+                    Fps = Math.Clamp(o.Fps, 1, 120);
+                    ShowStats = o.Stats;
 
                     if (!string.IsNullOrEmpty(o.Color))
                     {

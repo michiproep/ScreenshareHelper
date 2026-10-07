@@ -37,6 +37,9 @@ Use process name or better process ID (MainWindow process ID) to accomplish this
 --no-mouse => Disable mirroring the mouse pointer.
 --color => Background color: a named color, a hex code RRGGBB/AARRGGBB, or 'Transparent'.
 --auto-set => Automatically set the capture area (like clicking 'Set') when the window loses focus.
+--capture => Capture method: `gdi` (default), `dxgi` (Desktop Duplication) or `wgc` (Windows.Graphics.Capture). *Experimental.*
+--fps => Target frames per second (default 30).
+--stats => Show capture method, frame rate and capture time in the window.
 
 Examples
 ```

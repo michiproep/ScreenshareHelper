@@ -21,6 +21,10 @@ Priority: 🔴 high · 🟡 medium · 🟢 nice to have
 - [ ] 🟢 **Highlight mouse clicks** in the mirrored image (helpful in presentations).
 - [ ] 🟢 **Profiles**: save/restore several named capture areas (e.g. `--profile left-half`).
 - [ ] 🟢 **Modern capture API**: evaluate `Windows.Graphics.Capture` / DXGI Desktop Duplication for better performance and GPU-rendered content.
+  - Prototype on branch `experiment/modern-capture` (`--capture gdi|dxgi|wgc --stats`). Measured 1600×900 area on 5120×1440 monitor:
+    GDI ~26 ms/frame always; DXGI/WGC ~0.1 ms when nothing changed, ~5.5 ms when the area changed (GPU readback).
+  - Exe size (framework-dependent): 0.6 MB → 28 MB, almost entirely the WinRT projection needed for WGC. DXGI alone (Vortice) is much smaller.
+  - Open: real-world test (videos, browsers, games, multi-monitor, mixed DPI, rotated monitors, laptop with hybrid GPU), yellow WGC border on Windows 10, double-buffered staging to cut readback stalls.
 
 ## Code quality
 - [ ] 🟡 **Test project**: unit tests for `TryParseColor` and option parsing; re-enable `dotnet test` in CI.
