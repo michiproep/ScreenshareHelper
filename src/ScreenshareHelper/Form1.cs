@@ -200,7 +200,14 @@ namespace ScreenshareHelper
             try
             {
                 if (frame != null)
-                    graphics.DrawImageUnscaled(frame, 0, 0);
+                {
+                    // draw pixel by pixel: DrawImageUnscaled would scale by the bitmap's DPI (= system DPI) vs. the window DPI
+                    var rect = new Rectangle(Point.Empty, frame.Size);
+                    graphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
+                    graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                    graphics.DrawImage(frame, rect, rect, GraphicsUnit.Pixel);
+                    graphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
+                }
                 if (Program.CopyMouse)
                 {
                     CopyMousePointer(graphics);
