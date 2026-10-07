@@ -1,133 +1,135 @@
 name: Build and Release
 
+# Two ways to release:
+#  1. Actions tab -> "Build and Release" -> Run workflow -> enter a version (e.g. 0.8.0 or 0.8.0-rc.1).
+#     The tag is created on the selected branch's HEAD.
+#  2. Push a tag yourself: git tag 0.8.0 && git push origin 0.8.0
+# Versions with a suffix (e.g. -rc.1) are published as pre-release.
+
 on:
   push:
     tags:
-      - '*'  # Trigger on version tags like v1.0.0
-  workflow_dispatch:  # Allow manual execution
+      - '[0-9]+.[0-9]+*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 0.8.0 or 0.8.0-rc.1 (no "v" prefix)'
+        required: true
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
+  version:
+    name: Determine version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate version
+        id: version
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            VERSION="$GITHUB_REF_NAME"
+          else
+            VERSION="$INPUT_VERSION"
+            if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+              echo "::error::Tag $VERSION already exists."
+              exit 1
+            fi
+          fi
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$VERSION' is not a valid version (expected e.g. 0.8.0 or 0.8.0-rc.1)."
+            exit 1
+          fi
+
+          PRERELEASE=false
+          [[ "$VERSION" == *-* ]] && PRERELEASE=true
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "Releasing $VERSION (prerelease: $PRERELEASE)"
+
   build:
-    name: Build and Publish
+    name: Publish ${{ matrix.rid }}
+    needs: version
     runs-on: windows-latest
+    strategy:
+      matrix:
+        rid: [win-x64, win-x86]
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Required to fetch all tags
+        uses: actions/checkout@v7
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore Dependencies
-        run: dotnet restore src/
-
-      # - name: Run Tests
-      #   run: dotnet test --no-restore --verbosity normal --project src/*.sln
-
-      - name: Publish x86
-        run: dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x86 --self-contained false -p:PublishSingleFile=true -o ${{ github.workspace }}/bin/x86
-
-      - name: Publish x64
-        run: dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ${{ github.workspace }}/bin/x64
-
-      - name: Create ZIP Archives (Windows)
+      - name: Publish
         shell: pwsh
-        run: |
-            $x86Path = "${{ github.workspace }}/bin/x86"
-            $x64Path = "${{ github.workspace }}/bin/x64"
-    
-            if (Test-Path $x86Path) { Compress-Archive -Path "$x86Path/*" -DestinationPath "${{ github.workspace }}/bin/x86.zip" }
-            if (Test-Path $x64Path) { Compress-Archive -Path "$x64Path/*" -DestinationPath "${{ github.workspace }}/bin/x64.zip" }
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          RID: ${{ matrix.rid }}
+        run: >
+          dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj
+          -c Release -r $env:RID --self-contained false
+          -p:PublishSingleFile=true
+          -p:Version=$env:VERSION
+          -p:DebugType=none
+          -o publish/$env:RID
 
+      - name: Create ZIP
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          RID: ${{ matrix.rid }}
+        run: Compress-Archive -Path "publish/$env:RID/*" -DestinationPath "ScreenshareHelper-$env:VERSION-$env:RID.zip"
 
-      - name: Upload Artifacts (x86)
-        uses: actions/upload-artifact@v4
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
         with:
-          name: published-x86
-          path: "${{ github.workspace }}/bin/x86.zip"
-
-      - name: Upload Artifacts (x64)
-        uses: actions/upload-artifact@v4
-        with:
-          name: published-x64
-          path: "${{ github.workspace }}/bin/x64.zip"
+          name: ${{ matrix.rid }}
+          path: ScreenshareHelper-*.zip
+          if-no-files-found: error
 
   release:
     name: Create GitHub Release
-    needs: build
+    needs: [version, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
         with:
-          fetch-depth: 0  # Ensures full commit history is available
-      - name: Determine Release Tag
-        id: release_tag
-        run: |
-            if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            # If triggered by a tag push, use the tag directly
-            TAG_NAME="${GITHUB_REF#refs/tags/}"
-            else
-            # If manually triggered, find last tag and create an RC version
-            LAST_TAG=$(git describe --tags --abbrev=0)
-            EXISTING_RC_COUNT=$(gh release list --json tagName | jq "[.[].tagName | test(\"^${LAST_TAG}-rc\\\\.[0-9]+$\")] | length")
-            NEW_RC_NUMBER=$((EXISTING_RC_COUNT + 1))
-            TAG_NAME="${LAST_TAG}-rc.${NEW_RC_NUMBER}"
-            fi
-            echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-
-      - name: Get Previous Tag
-        id: prev_tag
-        run: echo "PREV_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=2 | tail -n1))" >> $GITHUB_ENV
-
-      - name: Get Commit Messages
-        id: commit_messages
-        run: |
-            if [ -z "$PREV_TAG" ]; then
-              echo "No previous tag found. Using all commits."
-              COMMITS=$(git log --pretty=format:'- %h %s')
-            else
-              echo "Fetching commits between $PREV_TAG and ${{ github.ref_name }}"
-              COMMITS=$(git log $PREV_TAG..${{ github.ref_name }} --pretty=format:'- %h %s')
-            fi
-
-            # Properly store multiline commit log
-            {
-              echo "COMMITS<<EOF"
-              echo "$COMMITS"
-              echo "EOF"
-            } >> "$GITHUB_ENV"
-
-      - name: Download x86 Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: published-x86
-          path: ${{ github.workspace }}/bin/
-
-      - name: Download x64 Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: published-x64
-          path: ${{ github.workspace }}/bin/
+          path: dist
+          merge-multiple: true
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ env.TAG_NAME }}
-          name: Release ${{ env.TAG_NAME }}
-          body: |
-            ## Changes in this release
-            ${{ env.COMMITS }}
-          files: |
-            ${{ github.workspace }}/bin/x86.zip
-            ${{ github.workspace }}/bin/x64.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ needs.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: Release ${{ needs.version.outputs.version }}
+          prerelease: ${{ needs.version.outputs.prerelease }}
+          generate_release_notes: true
+          files: dist/*.zip
+          fail_on_unmatched_files: true
