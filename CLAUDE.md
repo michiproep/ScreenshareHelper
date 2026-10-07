@@ -23,3 +23,4 @@ Windows only – the app uses WinForms and P/Invoke (user32, gdi32, dwmapi, kern
 - Win32 interop lives next to the code that uses it (`#region Win32`).
 - New CLI options: add to `Options.cs`, wire up in `Program.Main`, and document in `readme.md` under "Command Line Options".
 - Release binaries are built by CI, never commit `bin/` output.
+- Improvement ideas are collected in `Todo.md`; tick items off there when implementing them.
