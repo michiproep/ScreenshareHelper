@@ -366,11 +366,21 @@ namespace ScreenshareHelper
             captureTimer.Stop();
         }
 
-        protected override void OnFormClosed(FormClosedEventArgs e)
+        /// <summary>
+        /// Releases the capture resources. Called by Program after Application.Run returned: WinRT/COM calls
+        /// (e.g. closing a Windows.Graphics.Capture session) are not allowed while WM_CLOSE is being handled
+        /// as part of an input-synchronous call (RPC_E_CANTCALLOUT_ININPUTSYNCCALL when clicking "Close App").
+        /// </summary>
+        public void ReleaseCaptureResources()
         {
-            base.OnFormClosed(e);
-            // dispose only after the window is gone: Deactivate/Paint can still run while closing
-            capture?.Dispose();
+            try
+            {
+                capture?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
             capture = null;
             frame?.Dispose();
             frame = null;

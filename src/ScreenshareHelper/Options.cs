@@ -19,7 +19,7 @@ namespace ScreenshareHelper
         [Option("auto-set", Required = false, HelpText = "Automatically set the capture area (like clicking 'Set') when the window loses focus.")]
         public bool AutoSet { get; set; }
 
-        [Option("capture", Required = false, Default = Capture.CaptureMethod.Gdi, HelpText = "Capture method: Gdi (classic), Dxgi (Desktop Duplication) or Wgc (Windows.Graphics.Capture).")]
+        [Option("capture", Required = false, Default = Capture.CaptureMethod.Dxgi, HelpText = "Capture method: Dxgi (Desktop Duplication, default), Gdi (classic) or Wgc (Windows.Graphics.Capture).")]
         public Capture.CaptureMethod CaptureMethod { get; set; }
 
         [Option("fps", Required = false, Default = 30, HelpText = "Target frames per second (1-120).")]

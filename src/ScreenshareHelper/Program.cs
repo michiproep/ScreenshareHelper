@@ -21,7 +21,7 @@ namespace ScreenshareHelper
 
         public static bool AutoSetOnFocusLoss = false;
         public static bool CopyMouse = true;
-        public static Capture.CaptureMethod CaptureMethod = Capture.CaptureMethod.Gdi;
+        public static Capture.CaptureMethod CaptureMethod = Capture.CaptureMethod.Dxgi;
         public static int Fps = 30;
         public static bool ShowStats = false;
 
@@ -70,7 +70,9 @@ namespace ScreenshareHelper
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+            var form = new Form1();
+            Application.Run(form);
+            form.ReleaseCaptureResources();
         }
 
         #region Color parsing

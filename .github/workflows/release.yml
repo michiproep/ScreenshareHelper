@@ -89,7 +89,7 @@ jobs:
           RID: ${{ matrix.rid }}
         run: >
           dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj
-          -c Release -r $env:RID --self-contained false
+          -c Release -r $env:RID -p:SelfContained=false
           -p:PublishSingleFile=true
           -p:Version=$env:VERSION
           -p:DebugType=none
