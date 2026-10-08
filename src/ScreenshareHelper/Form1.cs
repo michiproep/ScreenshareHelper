@@ -20,6 +20,8 @@ namespace ScreenshareHelper
         private Point lastCursorPos;
         private string captureError;
         private VirtualCameraOutput virtualCamera;
+        private VirtualMonitor.VirtualMonitorForm virtualMonitor;
+        private VirtualMonitor.VirtualMonitorForm closingVirtualMonitor;
         private string cameraError;
         private bool closing;
         private readonly CaptureStats stats = new CaptureStats();
@@ -39,6 +41,11 @@ namespace ScreenshareHelper
             this.labelSize.BackColor = this.BackColor;
 
             this.MouseDown += Form1_MouseDown;
+
+            comboVirtualMonitorResolution.Items.AddRange(VirtualMonitor.VirtualMonitorForm.ResolutionChoices);
+            comboVirtualMonitorResolution.SelectedItem = Settings.Default.VirtualMonitorResolution;
+            if (comboVirtualMonitorResolution.SelectedIndex < 0)
+                comboVirtualMonitorResolution.SelectedItem = "1920x1080";
             this.SizeChanged += Form1_SizeChanged;
         }
 
@@ -315,6 +322,84 @@ namespace ScreenshareHelper
             setWindowToBackground();
         }
 
+        private void buttonSetVirtualMonitorArea_Click(object sender, EventArgs e)
+        {
+            Settings.Default.VirtualMonitorLocation = this.Location;
+            Settings.Default.VirtualMonitorSize = this.Size;
+            Settings.Default.Save();
+
+            ShowVirtualMonitor();
+            setWindowToBackground();
+        }
+
+        private void comboVirtualMonitorResolution_SelectionChangeCommitted(object sender, EventArgs e)
+        {
+            Settings.Default.VirtualMonitorResolution = (string)comboVirtualMonitorResolution.SelectedItem;
+            Settings.Default.Save();
+            if (virtualMonitor != null)
+                ShowVirtualMonitor();
+        }
+
+        /// <summary>Makes the window 16:9 (keeps the height), so the area fills a 16:9 virtual monitor without black bars.</summary>
+        private void buttonAspect16x9_Click(object sender, EventArgs e)
+        {
+            Width = (int)Math.Round(Height * 16 / 9.0);
+        }
+
+        private void buttonRemoveVirtualMonitor_Click(object sender, EventArgs e)
+        {
+            virtualMonitor?.Close();
+        }
+
+        /// <summary>Adds the virtual monitor (or updates its area) showing the virtual monitor area, independent of the window's own capture area.</summary>
+        private void ShowVirtualMonitor()
+        {
+            var area = new Rectangle(Settings.Default.VirtualMonitorLocation, Settings.Default.VirtualMonitorSize);
+            if (area.Width <= 0 || area.Height <= 0)
+                return;
+            var resolution = VirtualMonitor.VirtualMonitorForm.ParseResolution(Settings.Default.VirtualMonitorResolution);
+            if (virtualMonitor != null)
+            {
+                virtualMonitor.SetArea(area, resolution);
+                return;
+            }
+            if (!VirtualMonitor.VirtualMonitorForm.EnsureDriverInteractive())
+                return;
+
+            try
+            {
+                Cursor.Current = Cursors.WaitCursor;
+                virtualMonitor = new VirtualMonitor.VirtualMonitorForm(area, resolution);
+                virtualMonitor.FormClosed += VirtualMonitor_FormClosed;
+                virtualMonitor.Show();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                virtualMonitor?.ReleaseResources();
+                virtualMonitor = null;
+                MessageBox.Show($"The virtual monitor could not be created: {ex.Message}", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            UpdateControlsVisibility();
+        }
+
+        private void VirtualMonitor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            var closed = (VirtualMonitor.VirtualMonitorForm)sender;
+            if (closed == virtualMonitor)
+                virtualMonitor = null;
+            // not while WM_CLOSE is handled, see ReleaseCaptureResources; on app exit that does it instead
+            if (!closing)
+                BeginInvoke(new Action(closed.ReleaseResources));
+            UpdateControlsVisibility();
+        }
+
+        private void UpdateControlsVisibility()
+        {
+            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = buttonSetVirtualMonitorArea.Visible = comboVirtualMonitorResolution.Visible = buttonAspect16x9.Visible = isActive;
+            buttonRemoveVirtualMonitor.Visible = isActive && virtualMonitor != null;
+        }
+
         private void setWindowToBackground()
         {
             SetWindowPos(this.Handle, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
@@ -364,7 +449,7 @@ namespace ScreenshareHelper
         {
             isActive = true;
             UpdateSizeBox();
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
+            UpdateControlsVisibility();
             Invalidate();
         }
         private void Form1_Deactivate(object sender, EventArgs e)
@@ -378,7 +463,7 @@ namespace ScreenshareHelper
             else if (Settings.Default.CaptureSize.Width > 0 && Settings.Default.CaptureSize.Height > 0)
                 Size = Settings.Default.CaptureSize; // show exactly the capture area, whether the window was resized larger or smaller
 
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
+            UpdateControlsVisibility();
             Invalidate();
         }
 
@@ -387,6 +472,8 @@ namespace ScreenshareHelper
             closing = true;
             SaveWindowPosition();
             captureTimer.Stop();
+            closingVirtualMonitor = virtualMonitor;
+            virtualMonitor?.Close();
         }
 
         /// <summary>
@@ -407,27 +494,34 @@ namespace ScreenshareHelper
             capture = null;
             virtualCamera?.Dispose();
             virtualCamera = null;
+            closingVirtualMonitor?.ReleaseResources();
+            closingVirtualMonitor = null;
             frame?.Dispose();
             frame = null;
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            this.BeginInvoke(new Action(() =>
-            {
-                IntPtr currentWindow = GetForegroundWindow(); // Get the current active window
-                SetForegroundWindow(currentWindow); // Re-focus it, removing focus from our window
-            }));
+            // with --virtual-monitor the window stays in front, it is the frame you place over the area to show
+            if (!Program.VirtualMonitor)
+                this.BeginInvoke(new Action(() =>
+                {
+                    IntPtr currentWindow = GetForegroundWindow(); // Get the current active window
+                    SetForegroundWindow(currentWindow); // Re-focus it, removing focus from our window
+                }));
 
             StartCapture();
             UpdateSizeDisplay();
+            if (Program.VirtualMonitor)
+                ShowVirtualMonitor();
             
         }
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
             isActive = true;
-            setWindowToBackground();
+            if (!Program.VirtualMonitor)
+                setWindowToBackground();
         }
 
         private void buttonCloseApp_Click(object sender, EventArgs e)

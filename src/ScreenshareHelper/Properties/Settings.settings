@@ -20,5 +20,14 @@
     <Setting Name="BackgroundColor" Type="System.Drawing.Color" Scope="User">
       <Value Profile="(Default)">Transparent</Value>
     </Setting>
+    <Setting Name="VirtualMonitorLocation" Type="System.Drawing.Point" Scope="User">
+      <Value Profile="(Default)">0, 0</Value>
+    </Setting>
+    <Setting Name="VirtualMonitorSize" Type="System.Drawing.Size" Scope="User">
+      <Value Profile="(Default)">0, 0</Value>
+    </Setting>
+    <Setting Name="VirtualMonitorResolution" Type="System.String" Scope="User">
+      <Value Profile="(Default)">1920x1080</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -17,6 +17,7 @@ Priority: 🔴 high · 🟡 medium · 🟢 nice to have
 - [ ] 🟡 **Global hotkey** to (re)set the capture area or toggle mouse mirroring without focusing the window.
 - [ ] 🟡 **Capture follow-ups**: exe grew 0.6 MB → 28 MB, almost entirely the WinRT projection for WGC – drop WGC (DXGI alone is small) or keep it optional; DXGI/WGC only capture the monitor under the area center (no areas spanning two monitors) and ignore rotated monitors; double-buffered staging texture to cut the ~5 ms readback stall; WinForms timer caps at ~20–30 ticks/s.
 - [ ] 🟡 **Virtual camera follow-ups**: autostart with Windows (Run key) + tray icon so the camera is always available; feedback from the pre-release (Teams image quality, other apps); code signing for the camera DLL.
+- [ ] 🟡 **Virtual monitor follow-ups**: render on the GPU (D3D11 swap chain, the DXGI frame is already a texture) instead of GDI+ scaling on the CPU; exact resolutions via custom modes (`HKLM\SOFTWARE\Parsecdd`, needs admin); silent driver install (`/S`, verify the Parsec signature) instead of opening the download; "give control" in Teams maps to the virtual monitor, not the area; feedback from the pre-release.
 - [ ] 🟢 **Tray icon** with menu (Set, mouse on/off, color, exit).
 - [ ] 🟢 **Highlight mouse clicks** in the mirrored image (helpful in presentations).
 - [ ] 🟢 **Profiles**: save/restore several named capture areas (e.g. `--profile left-half`).
@@ -36,6 +37,7 @@ Priority: 🔴 high · 🟡 medium · 🟢 nice to have
 - [ ] 🟢 README: fix typos, add a GIF/screenshot of the tool in action.
 
 ## Done
+- [x] Virtual monitor (Parsec Virtual Display Driver): "Set for virtual monitor" with its own area, resolution drop-down (default 1920x1080, Auto), "16:9" button, `--virtual-monitor`, monitor placed corner-to-corner so the mouse can't get lost
 - [x] Virtual camera (`--virtual-camera`, Windows 11 x64): native Media Foundation source, one-time setup to Program Files via UAC (`--install-camera` / `--uninstall-camera`), built in CI
 - [x] GDI leak in render loop (timer-driven rendering instead of endless paint thread)
 - [x] Configurable frame rate (`--fps`, default 30)
