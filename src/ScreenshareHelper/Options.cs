@@ -34,6 +34,9 @@ namespace ScreenshareHelper
         [Option("uninstall-camera", Required = false, HelpText = "Remove the virtual camera and exit. Asks for administrator rights.")]
         public bool UninstallCamera { get; set; }
 
+        [Option("virtual-monitor", Required = false, HelpText = "At startup, add a virtual monitor showing the area last set with 'Set for virtual monitor' (needs the Parsec Virtual Display Driver).")]
+        public bool VirtualMonitor { get; set; }
+
         [Option("stats", Required = false, HelpText = "Show capture method, frame rate and capture time in the window.")]
         public bool Stats { get; set; }
     }

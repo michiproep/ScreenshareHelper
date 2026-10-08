@@ -94,5 +94,41 @@ namespace ScreenshareHelper.Properties {
                 this["BackgroundColor"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0, 0")]
+        public global::System.Drawing.Point VirtualMonitorLocation {
+            get {
+                return ((global::System.Drawing.Point)(this["VirtualMonitorLocation"]));
+            }
+            set {
+                this["VirtualMonitorLocation"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0, 0")]
+        public global::System.Drawing.Size VirtualMonitorSize {
+            get {
+                return ((global::System.Drawing.Size)(this["VirtualMonitorSize"]));
+            }
+            set {
+                this["VirtualMonitorSize"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1920x1080")]
+        public string VirtualMonitorResolution {
+            get {
+                return ((string)(this["VirtualMonitorResolution"]));
+            }
+            set {
+                this["VirtualMonitorResolution"] = value;
+            }
+        }
     }
 }

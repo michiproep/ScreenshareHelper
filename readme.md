@@ -42,6 +42,7 @@ Use process name or better process ID (MainWindow process ID) to accomplish this
 --stats => Show capture method, frame rate and capture time in the window.
 --virtual-camera => *Windows 11, x64:* also publish the capture area as a webcam named "ScreenshareHelper" (see [Virtual camera](#virtual-camera)).
 --install-camera / --uninstall-camera => Set up or remove the virtual camera and exit (asks for administrator rights).
+--virtual-monitor => At startup, add the virtual monitor with the area last set via "Set for virtual monitor"; the window stays in front (see [Virtual monitor](#virtual-monitor)).
 
 Examples
 ```
@@ -56,6 +57,15 @@ The first time you use it, the tool offers a one-time setup: after confirming th
 To remove it: `ScreenshareHelper.exe --uninstall-camera`.
 
 > Camera images are compressed more than screen sharing, so small text may be less sharp than when sharing the window.
+
+## Virtual monitor
+*Experimental.* Instead of sharing the tool's window, share a whole (virtual) screen: place the tool over the area you want to show and click **Set for virtual monitor**. The tool adds an extra monitor to Windows and shows that area on it, full screen (scaled to fit, black bars, including the mouse pointer). In Teams or Zoom, share that screen. The virtual monitor area is separate from the normal capture area ("Set"), both work at the same time. **Remove virtual monitor** (or closing the tool) removes the monitor again.
+
+The virtual monitor needs the free [Parsec Virtual Display Driver](https://support.parsec.app/hc/en-us/articles/360054478211-Parsec-Virtual-Displays) (signed, installed once with administrator rights). If it is missing, the tool offers to download the installer. You don't need a Parsec account or the Parsec app.
+
+The resolution drop-down next to the button sets the monitor resolution: **1920x1080** (default, what Teams shares at most), 1280x720, 2560x1440, 3840x2160 or **Auto** (the largest resolution that fits into the area without upscaling). If the area doesn't have the monitor's aspect ratio, the image gets black bars; **16:9** makes the window 16:9 (keeps the height, adjusts the width) before you click "Set for virtual monitor".
+
+The monitor is placed at the bottom-right corner of your desktop, touching the other monitors only at the corner, so your mouse can't wander onto it.
 
 ## Donate
 If you like the tool, just [Paypal.me](https://paypal.me/mlproe?locale.x=de_DE)

@@ -25,6 +25,7 @@ namespace ScreenshareHelper
         public static int Fps = 30;
         public static bool ShowStats = false;
         public static bool VirtualCamera = false;
+        public static bool VirtualMonitor = false;
 
         [STAThread]
         static void Main(string[] args)
@@ -66,6 +67,7 @@ namespace ScreenshareHelper
                     Fps = Math.Clamp(o.Fps, 1, 120);
                     ShowStats = o.Stats;
                     VirtualCamera = o.VirtualCamera;
+                    VirtualMonitor = o.VirtualMonitor;
 
                     if (!string.IsNullOrEmpty(o.Color))
                     {
