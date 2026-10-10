@@ -19,6 +19,8 @@ namespace ScreenshareHelper.VirtualMonitor
         private Rectangle area;
         private Size? resolution;
         private IScreenCapture capture;
+        private AreaFrameForm areaFrame;
+        private long lastBringToTop;
         private Bitmap frame;
         private readonly Timer captureTimer = new Timer();
         private Point lastCursorPos;
@@ -66,6 +68,7 @@ namespace ScreenshareHelper.VirtualMonitor
             display = new ParsecVirtualDisplay();
             display.Configure(area.Size, resolution);
             Bounds = display.Bounds;
+            areaFrame = new AreaFrameForm(area);
 
             try
             {
@@ -86,12 +89,19 @@ namespace ScreenshareHelper.VirtualMonitor
             bool reconfigure = newResolution != resolution || (!newResolution.HasValue && newArea.Size != area.Size);
             area = newArea;
             resolution = newResolution;
+            areaFrame?.SetArea(area);
             if (reconfigure && display != null)
             {
                 display.Configure(area.Size, resolution);
                 Bounds = display.Bounds;
             }
             Invalidate();
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            areaFrame?.Show();
         }
 
         // don't take the focus from the main window or the presenter's app
@@ -132,6 +142,13 @@ namespace ScreenshareHelper.VirtualMonitor
             var bounds = display.Bounds;
             if (!bounds.IsEmpty && bounds != Bounds)
                 Bounds = bounds;
+
+            // other topmost windows (e.g. the Teams sharing bar) may have covered the frame
+            if (Environment.TickCount64 - lastBringToTop > 1000)
+            {
+                lastBringToTop = Environment.TickCount64;
+                areaFrame?.BringToTop();
+            }
 
             if (frame == null || frame.Size != area.Size)
             {
@@ -226,6 +243,8 @@ namespace ScreenshareHelper.VirtualMonitor
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             captureTimer.Stop();
+            areaFrame?.Close();
+            areaFrame = null;
             base.OnFormClosing(e);
         }
 
@@ -245,6 +264,8 @@ namespace ScreenshareHelper.VirtualMonitor
                 Debug.WriteLine(ex);
             }
             capture = null;
+            areaFrame?.Dispose();
+            areaFrame = null;
             display?.Dispose();
             display = null;
             frame?.Dispose();

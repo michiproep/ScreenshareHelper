@@ -59,7 +59,7 @@ To remove it: `ScreenshareHelper.exe --uninstall-camera`.
 > Camera images are compressed more than screen sharing, so small text may be less sharp than when sharing the window.
 
 ## Virtual monitor
-*Experimental.* Instead of sharing the tool's window, share a whole (virtual) screen: place the tool over the area you want to show and click **Set for virtual monitor**. The tool adds an extra monitor to Windows and shows that area on it, full screen (scaled to fit, black bars, including the mouse pointer). In Teams or Zoom, share that screen. The virtual monitor area is separate from the normal capture area ("Set"), both work at the same time. **Remove virtual monitor** (or closing the tool) removes the monitor again.
+*Experimental.* Instead of sharing the tool's window, share a whole (virtual) screen: place the tool over the area you want to show and click **Set for virtual monitor**. The tool adds an extra monitor to Windows and shows that area on it, full screen (scaled to fit, black bars, including the mouse pointer). In Teams or Zoom, share that screen. The virtual monitor area is separate from the normal capture area ("Set"), both work at the same time. A thin red frame marks the shared area on your screen; it is click-through and not captured itself. **Remove virtual monitor** (or closing the tool) removes the monitor again.
 
 The virtual monitor needs the free [Parsec Virtual Display Driver](https://support.parsec.app/hc/en-us/articles/360054478211-Parsec-Virtual-Displays) (signed, installed once with administrator rights). If it is missing, the tool offers to download the installer. You don't need a Parsec account or the Parsec app.
 

@@ -13,7 +13,7 @@ Priority: 🔴 high · 🟡 medium · 🟢 nice to have
 ## Features
 - [ ] 🔴 **#4 Bring snapped process to front** when using `-n`/`-i` (open GitHub issue).
 - [ ] 🟡 **Follow window**: optionally keep tracking the snapped process window when it moves/resizes (instead of a one-time snap).
-- [ ] 🟡 **Visible capture border**: show a thin frame around the capture area (not captured itself) so you can see what is shared.
+- [ ] 🟡 **Visible capture border**: show a thin frame around the capture area (not captured itself) so you can see what is shared. Done for the virtual monitor area (`AreaFrameForm`), could be reused for the normal capture area.
 - [ ] 🟡 **Global hotkey** to (re)set the capture area or toggle mouse mirroring without focusing the window.
 - [ ] 🟡 **Capture follow-ups**: exe grew 0.6 MB → 28 MB, almost entirely the WinRT projection for WGC – drop WGC (DXGI alone is small) or keep it optional; DXGI/WGC only capture the monitor under the area center (no areas spanning two monitors) and ignore rotated monitors; double-buffered staging texture to cut the ~5 ms readback stall; WinForms timer caps at ~20–30 ticks/s.
 - [ ] 🟡 **Virtual camera follow-ups**: autostart with Windows (Run key) + tray icon so the camera is always available; feedback from the pre-release (Teams image quality, other apps); code signing for the camera DLL.
@@ -37,7 +37,7 @@ Priority: 🔴 high · 🟡 medium · 🟢 nice to have
 - [ ] 🟢 README: fix typos, add a GIF/screenshot of the tool in action.
 
 ## Done
-- [x] Virtual monitor (Parsec Virtual Display Driver): "Set for virtual monitor" with its own area, resolution drop-down (default 1920x1080, Auto), "16:9" button, `--virtual-monitor`, monitor placed corner-to-corner so the mouse can't get lost
+- [x] Virtual monitor (Parsec Virtual Display Driver): "Set for virtual monitor" with its own area, resolution drop-down (default 1920x1080, Auto), "16:9" button, `--virtual-monitor`, monitor placed corner-to-corner so the mouse can't get lost; red 1px click-through frame around the shared area (excluded from capture)
 - [x] Virtual camera (`--virtual-camera`, Windows 11 x64): native Media Foundation source, one-time setup to Program Files via UAC (`--install-camera` / `--uninstall-camera`), built in CI
 - [x] GDI leak in render loop (timer-driven rendering instead of endless paint thread)
 - [x] Configurable frame rate (`--fps`, default 30)
