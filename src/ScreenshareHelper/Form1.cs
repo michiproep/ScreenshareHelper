@@ -3,9 +3,11 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ScreenshareHelper.Capture;
 using ScreenshareHelper.Properties;
+using ScreenshareHelper.VirtualMonitor;
 
 namespace ScreenshareHelper
 {
@@ -14,17 +16,20 @@ namespace ScreenshareHelper
         readonly Color transKey = Color.SaddleBrown;
         private bool isActive = true;
 
-        private IScreenCapture capture;
+        private AppMode mode;
+        private TrayIcon tray;
+        private ResilientCapture capture;
         private Bitmap frame;
         private readonly System.Windows.Forms.Timer captureTimer = new System.Windows.Forms.Timer();
         private Point lastCursorPos;
-        private string captureError;
+        private string shownError;
         private VirtualCameraOutput virtualCamera;
-        private VirtualMonitor.VirtualMonitorForm virtualMonitor;
-        private VirtualMonitor.VirtualMonitorForm closingVirtualMonitor;
+        private VirtualMonitorForm virtualMonitor;
+        private VirtualMonitorForm closingVirtualMonitor;
         private string cameraError;
         private bool closing;
-        private readonly CaptureStats stats = new CaptureStats();
+        private bool exiting;
+        private bool busy; // installer running
 
         public Form1()
         {
@@ -42,12 +47,23 @@ namespace ScreenshareHelper
 
             this.MouseDown += Form1_MouseDown;
 
-            comboVirtualMonitorResolution.Items.AddRange(VirtualMonitor.VirtualMonitorForm.ResolutionChoices);
+            comboVirtualMonitorResolution.Items.AddRange(VirtualMonitorForm.ResolutionChoices);
             comboVirtualMonitorResolution.SelectedItem = Settings.Default.VirtualMonitorResolution;
             if (comboVirtualMonitorResolution.SelectedIndex < 0)
                 comboVirtualMonitorResolution.SelectedItem = "1920x1080";
             this.SizeChanged += Form1_SizeChanged;
+
+            // camera / virtual monitor mode: no window at start (it is shown invisibly once, then hidden in OnShown)
+            if (!Enum.TryParse(Settings.Default.Mode, out mode))
+                mode = AppMode.Normal;
+            if (mode != AppMode.Normal)
+                Opacity = 0;
         }
+
+        public AppMode Mode => mode;
+
+        /// <summary>The window shows the mirrored capture area (normal mode, inactive); otherwise it shows the setup buttons.</summary>
+        private bool Mirroring => mode == AppMode.Normal && !isActive;
 
         #region Drag/Move the form
         public const int WM_NCLBUTTONDOWN = 0xA1;
@@ -73,17 +89,17 @@ namespace ScreenshareHelper
             get
             {
                 CreateParams cp = base.CreateParams;
-                if (isActive)
-                    cp.Style |= 0x40000; //WS_SIZEBOX;  
+                if (!Mirroring)
+                    cp.Style |= 0x40000; //WS_SIZEBOX;
                 else
-                    cp.Style &= ~0x40000; //WS_SIZEBOX;  
+                    cp.Style &= ~0x40000; //WS_SIZEBOX;
                 return cp;
             }
         }
         #endregion
         protected override void OnPaintBackground(PaintEventArgs e)
         {
-            if (isActive || frame == null)
+            if (!Mirroring || frame == null)
             {
                 base.OnPaintBackground(e);
                 return;
@@ -100,7 +116,7 @@ namespace ScreenshareHelper
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            if (!isActive)
+            if (Mirroring)
                 paint(e.Graphics);
         }
 
@@ -144,47 +160,22 @@ namespace ScreenshareHelper
         static extern bool DrawIcon(IntPtr hDC, int X, int Y, IntPtr hIcon);
 
         const Int32 CURSOR_SHOWING = 0x00000001;
-        [DllImport("gdi32.dll")]
-        private static extern bool BitBlt(IntPtr hdcDest, int xDest, int yDest, int width, int height, IntPtr hdcSrc, int xSrc, int ySrc, int rop);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetDC(IntPtr hwnd);
-        private const int SRCCOPY = 0x00CC0020;
         #endregion Cursor
 
 
         #region Capture
         private void StartCapture()
         {
-            try
-            {
-                capture = ScreenCaptureFactory.Create(Program.CaptureMethod);
-            }
-            catch (Exception ex)
-            {
-                FallBackToGdi(Program.CaptureMethod.ToString(), ex);
-            }
-
-            if (Program.VirtualCamera)
-                virtualCamera = VirtualCameraOutput.TryStart(out cameraError);
-
-            captureTimer.Interval = Math.Max(1, 1000 / Program.Fps);
+            capture = new ResilientCapture();
+            captureTimer.Interval = 1000 / Program.Fps;
             captureTimer.Tick += CaptureTimer_Tick;
             captureTimer.Start();
         }
 
-        private void FallBackToGdi(string failedMethod, Exception ex)
-        {
-            Debug.WriteLine($"Capture method {failedMethod} failed: {ex}");
-            captureError = $"{failedMethod} failed ({ex.GetType().Name}: {ex.Message}) - using GDI";
-            capture?.Dispose();
-            capture = new GdiScreenCapture();
-        }
-
         private void CaptureTimer_Tick(object sender, EventArgs e)
         {
-            // the window only needs frames while inactive, the virtual camera always
-            if ((isActive && virtualCamera == null) || closing || capture == null)
+            // the window only needs frames while it mirrors, the virtual camera always
+            if (!(Mirroring || virtualCamera != null) || closing || capture == null)
                 return;
 
             var area = new Rectangle(Settings.Default.CaptureLocation, Settings.Default.CaptureSize);
@@ -197,18 +188,10 @@ namespace ScreenshareHelper
                 frame = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppRgb);
             }
 
-            bool changed;
-            long start = Stopwatch.GetTimestamp();
-            try
-            {
-                changed = capture.Capture(area, frame);
-            }
-            catch (Exception ex)
-            {
-                FallBackToGdi(capture.Name, ex);
-                return;
-            }
-            stats.Add(Stopwatch.GetElapsedTime(start), changed);
+            bool changed = capture.Capture(area, frame);
+            var error = capture.Error;
+            bool errorChanged = error != shownError;
+            shownError = error;
 
             // only repaint if the image or the mouse pointer changed
             var cursorPos = Cursor.Position;
@@ -228,7 +211,7 @@ namespace ScreenshareHelper
                 }
             }
 
-            if (!isActive && (changed || cursorMoved || Program.ShowStats || captureError != null || cameraError != null))
+            if (Mirroring && (changed || cursorMoved || errorChanged))
                 Invalidate();
         }
 
@@ -249,8 +232,8 @@ namespace ScreenshareHelper
                 {
                     CopyMousePointer(graphics);
                 }
-                if (Program.ShowStats || captureError != null || cameraError != null)
-                    DrawStats(graphics);
+                if (shownError != null)
+                    DrawError(graphics, shownError);
             }
             catch (Exception ex)
             {
@@ -258,15 +241,8 @@ namespace ScreenshareHelper
             }
         }
 
-        private void DrawStats(Graphics graphics)
+        private static void DrawError(Graphics graphics, string text)
         {
-            var text = Program.ShowStats ? $"{capture?.Name} | {stats}" : "";
-            if (Program.ShowStats && virtualCamera != null)
-                text += Environment.NewLine + $"Virtual camera '{VirtualCameraOutput.CameraName}': " + (virtualCamera.Connected ? "in use" : "waiting for an app to open it");
-            foreach (var error in new[] { captureError, cameraError })
-                if (error != null)
-                    text += (text.Length > 0 ? Environment.NewLine : "") + error;
-
             using var font = new Font(FontFamily.GenericMonospace, 10f);
             var size = graphics.MeasureString(text, font);
             graphics.FillRectangle(Brushes.Black, 0, 0, size.Width + 6, size.Height + 4);
@@ -293,9 +269,208 @@ namespace ScreenshareHelper
             }
         }
 
-        
+        #region Modes
+        /// <summary>Switches between the normal window, the virtual camera and the virtual monitor.</summary>
+        public void ApplyMode(AppMode newMode)
+        {
+            if (busy)
+                return;
+            if (mode == AppMode.Normal && newMode != AppMode.Normal && Visible)
+                SaveWindowPosition();
 
+            if (newMode != AppMode.Camera)
+                StopCamera();
+            if (newMode != AppMode.VirtualMonitor)
+                CloseVirtualMonitor();
 
+            if (newMode == AppMode.Camera && !StartCamera())
+                newMode = AppMode.Normal;
+            if (newMode == AppMode.VirtualMonitor && !ParsecDriverSetup.IsInstalled)
+            {
+                if (VirtualMonitorForm.AskToInstallDriver())
+                    _ = InstallDriverAsync(switchToVirtualMonitor: true);
+                newMode = AppMode.Normal;
+            }
+
+            mode = newMode;
+            Settings.Default.Mode = mode.ToString();
+            Settings.Default.Save();
+            // the setup window must not show up in the camera or on the virtual monitor; in normal mode the window itself is shared
+            SetWindowDisplayAffinity(Handle, mode == AppMode.Normal ? WDA_NONE : WDA_EXCLUDEFROMCAPTURE);
+            TopMost = mode != AppMode.Normal;
+
+            if (mode == AppMode.Normal)
+            {
+                RestoreWindowPosition();
+                if (Settings.Default.CaptureSize.Width > 0 && Settings.Default.CaptureSize.Height > 0 && !isActive)
+                    Size = Settings.Default.CaptureSize;
+                UpdateSizeBox();
+                Show();
+            }
+            else
+            {
+                Hide();
+                if (mode == AppMode.VirtualMonitor && !ShowVirtualMonitor())
+                    BeginSetArea();
+            }
+            UpdateControlsVisibility();
+            Invalidate();
+        }
+
+        /// <summary>Shows the window to place it over the area to share (normal mode: just brings it to the front).</summary>
+        public void BeginSetArea()
+        {
+            if (mode != AppMode.Normal)
+            {
+                var area = mode == AppMode.Camera
+                    ? new Rectangle(Settings.Default.CaptureLocation, Settings.Default.CaptureSize)
+                    : new Rectangle(Settings.Default.VirtualMonitorLocation, Settings.Default.VirtualMonitorSize);
+                if (area.Width < 100 || area.Height < 100)
+                    area = new Rectangle(Settings.Default.Location, Settings.Default.Size);
+                if (area.Width < 100 || area.Height < 100)
+                    area = new Rectangle(100, 100, 800, 450);
+                UpdateSizeBox();
+                Bounds = area;
+            }
+            Show();
+            Activate();
+            UpdateControlsVisibility();
+        }
+
+        private void EndSetArea()
+        {
+            Hide();
+            // nothing to share without a virtual monitor area
+            if (mode == AppMode.VirtualMonitor && virtualMonitor == null)
+                ApplyMode(AppMode.Normal);
+        }
+
+        private bool StartCamera()
+        {
+            if (virtualCamera != null)
+                return true;
+            if (VirtualCameraSetup.GetStatus() == VirtualCameraSetupStatus.NotSupported)
+            {
+                MessageBox.Show("The virtual camera needs Windows 11 (x64 package).", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+            if (!VirtualCameraSetup.EnsureInstalledInteractive()) // asks once, elevates via UAC
+                return false;
+
+            virtualCamera = VirtualCameraOutput.TryStart(out cameraError);
+            if (virtualCamera == null)
+                MessageBox.Show(cameraError, "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return virtualCamera != null;
+        }
+
+        private void StopCamera()
+        {
+            virtualCamera?.Dispose();
+            virtualCamera = null;
+            cameraError = null;
+        }
+
+        private void CloseVirtualMonitor()
+        {
+            var closed = virtualMonitor;
+            virtualMonitor = null;
+            closed?.Close();
+        }
+
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public bool ShowAreaFrame
+        {
+            get => Settings.Default.ShowAreaFrame;
+            set
+            {
+                Settings.Default.ShowAreaFrame = value;
+                Settings.Default.Save();
+                if (virtualMonitor != null)
+                    virtualMonitor.ShowAreaFrame = value;
+            }
+        }
+
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public bool CopyMouse
+        {
+            get => Program.CopyMouse;
+            set
+            {
+                Program.CopyMouse = Settings.Default.CopyMouse = value;
+                Settings.Default.Save();
+                Invalidate();
+            }
+        }
+
+        public void InstallCamera()
+        {
+            if (VirtualCameraSetup.InstallElevated() && mode != AppMode.Camera)
+                ApplyMode(AppMode.Camera);
+        }
+
+        public void UninstallCamera()
+        {
+            if (mode == AppMode.Camera)
+                ApplyMode(AppMode.Normal);
+            if (!VirtualCameraSetup.UninstallElevated())
+                MessageBox.Show("The virtual camera was not removed.", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        public bool Busy => busy;
+
+        public async Task InstallDriverAsync(bool switchToVirtualMonitor)
+        {
+            if (busy)
+                return;
+            busy = true;
+            try
+            {
+                bool installed = await ParsecDriverSetup.InstallAsync();
+                busy = false;
+                if (installed && switchToVirtualMonitor)
+                    ApplyMode(AppMode.VirtualMonitor);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                MessageBox.Show($"The Parsec Virtual Display Driver could not be installed: {ex.Message}", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                busy = false;
+            }
+        }
+
+        public async Task UninstallDriverAsync()
+        {
+            if (busy)
+                return;
+            if (mode == AppMode.VirtualMonitor)
+                ApplyMode(AppMode.Normal);
+            busy = true;
+            try
+            {
+                if (!await ParsecDriverSetup.UninstallAsync() && ParsecDriverSetup.CanUninstall)
+                    MessageBox.Show("The driver was not removed. You can also remove \"Parsec Virtual Display Driver\" in Windows Settings > Apps.", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                MessageBox.Show($"The driver could not be removed: {ex.Message}", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                busy = false;
+            }
+        }
+
+        /// <summary>Closes the app (also from the hidden modes, where closing the window only cancels "Set area").</summary>
+        public void ExitApp()
+        {
+            exiting = true;
+            Close();
+        }
+        #endregion
 
         #region Window Events
         [DllImport("user32.dll")]
@@ -304,6 +479,12 @@ namespace ScreenshareHelper
         [DllImport("user32.dll")]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+
+        private const uint WDA_NONE = 0x0;
+        private const uint WDA_EXCLUDEFROMCAPTURE = 0x11;
+
         private static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
         private const uint SWP_NOMOVE = 0x0002;
         private const uint SWP_NOSIZE = 0x0001;
@@ -311,24 +492,38 @@ namespace ScreenshareHelper
 
         private void buttonSetCaptureArea_Click(object sender, EventArgs e)
         {
-            SetCaptureArea();
+            switch (mode)
+            {
+                case AppMode.Normal:
+                    SetCaptureArea();
+                    break;
+                case AppMode.Camera:
+                    Settings.Default.CaptureLocation = this.Location;
+                    Settings.Default.CaptureSize = this.Size;
+                    Settings.Default.Save();
+                    EndSetArea();
+                    break;
+                case AppMode.VirtualMonitor:
+                    Settings.Default.VirtualMonitorLocation = this.Location;
+                    Settings.Default.VirtualMonitorSize = this.Size;
+                    Settings.Default.Save();
+                    if (ShowVirtualMonitor())
+                        EndSetArea();
+                    break;
+            }
+        }
+
+        private void buttonCancel_Click(object sender, EventArgs e)
+        {
+            EndSetArea();
         }
 
         private void SetCaptureArea()
         {
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
-
-            setWindowToBackground();
-        }
-
-        private void buttonSetVirtualMonitorArea_Click(object sender, EventArgs e)
-        {
-            Settings.Default.VirtualMonitorLocation = this.Location;
-            Settings.Default.VirtualMonitorSize = this.Size;
             Settings.Default.Save();
 
-            ShowVirtualMonitor();
             setWindowToBackground();
         }
 
@@ -346,32 +541,26 @@ namespace ScreenshareHelper
             Width = (int)Math.Round(Height * 16 / 9.0);
         }
 
-        private void buttonRemoveVirtualMonitor_Click(object sender, EventArgs e)
-        {
-            virtualMonitor?.Close();
-        }
-
-        /// <summary>Adds the virtual monitor (or updates its area) showing the virtual monitor area, independent of the window's own capture area.</summary>
-        private void ShowVirtualMonitor()
+        /// <summary>Adds the virtual monitor (or updates its area) showing the virtual monitor area. False if there is none.</summary>
+        private bool ShowVirtualMonitor()
         {
             var area = new Rectangle(Settings.Default.VirtualMonitorLocation, Settings.Default.VirtualMonitorSize);
             if (area.Width <= 0 || area.Height <= 0)
-                return;
-            var resolution = VirtualMonitor.VirtualMonitorForm.ParseResolution(Settings.Default.VirtualMonitorResolution);
+                return false;
+            var resolution = VirtualMonitorForm.ParseResolution(Settings.Default.VirtualMonitorResolution);
             if (virtualMonitor != null)
             {
                 virtualMonitor.SetArea(area, resolution);
-                return;
+                return true;
             }
-            if (!VirtualMonitor.VirtualMonitorForm.EnsureDriverInteractive())
-                return;
 
             try
             {
                 Cursor.Current = Cursors.WaitCursor;
-                virtualMonitor = new VirtualMonitor.VirtualMonitorForm(area, resolution);
+                virtualMonitor = new VirtualMonitorForm(area, resolution);
                 virtualMonitor.FormClosed += VirtualMonitor_FormClosed;
                 virtualMonitor.Show();
+                return true;
             }
             catch (Exception ex)
             {
@@ -379,25 +568,27 @@ namespace ScreenshareHelper
                 virtualMonitor?.ReleaseResources();
                 virtualMonitor = null;
                 MessageBox.Show($"The virtual monitor could not be created: {ex.Message}", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
             }
-            UpdateControlsVisibility();
         }
 
         private void VirtualMonitor_FormClosed(object sender, FormClosedEventArgs e)
         {
-            var closed = (VirtualMonitor.VirtualMonitorForm)sender;
+            var closed = (VirtualMonitorForm)sender;
             if (closed == virtualMonitor)
                 virtualMonitor = null;
             // not while WM_CLOSE is handled, see ReleaseCaptureResources; on app exit that does it instead
             if (!closing)
                 BeginInvoke(new Action(closed.ReleaseResources));
-            UpdateControlsVisibility();
         }
 
         private void UpdateControlsVisibility()
         {
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = buttonSetVirtualMonitorArea.Visible = comboVirtualMonitorResolution.Visible = buttonAspect16x9.Visible = isActive;
-            buttonRemoveVirtualMonitor.Visible = isActive && virtualMonitor != null;
+            bool setup = !Mirroring;
+            buttonSetCaptureArea.Visible = labelSize.Visible = setup;
+            buttonCloseApp.Visible = setup && mode == AppMode.Normal;
+            buttonCancel.Visible = setup && mode != AppMode.Normal;
+            comboVirtualMonitorResolution.Visible = buttonAspect16x9.Visible = setup && mode == AppMode.VirtualMonitor;
         }
 
         private void setWindowToBackground()
@@ -432,8 +623,6 @@ namespace ScreenshareHelper
         [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
 
-        
-
         /// <summary>
         /// Adds/removes the sizing border (see CreateParams) without changing the window bounds;
         /// otherwise WinForms keeps the client size and the window no longer matches the capture area.
@@ -455,12 +644,11 @@ namespace ScreenshareHelper
         private void Form1_Deactivate(object sender, EventArgs e)
         {
             isActive = false;
-            if (closing)
+            // camera / virtual monitor: the setup window stays as it is until Set or Cancel
+            if (closing || mode != AppMode.Normal)
                 return;
             UpdateSizeBox();
-            if (Program.AutoSetOnFocusLoss)
-                SetCaptureArea();
-            else if (Settings.Default.CaptureSize.Width > 0 && Settings.Default.CaptureSize.Height > 0)
+            if (Settings.Default.CaptureSize.Width > 0 && Settings.Default.CaptureSize.Height > 0)
                 Size = Settings.Default.CaptureSize; // show exactly the capture area, whether the window was resized larger or smaller
 
             UpdateControlsVisibility();
@@ -469,17 +657,27 @@ namespace ScreenshareHelper
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            // camera / virtual monitor: closing the setup window (Alt+F4) only cancels, exit is in the tray menu
+            if (mode != AppMode.Normal && !exiting && e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                EndSetArea();
+                return;
+            }
+
             closing = true;
-            SaveWindowPosition();
+            if (mode == AppMode.Normal)
+                SaveWindowPosition();
             captureTimer.Stop();
             closingVirtualMonitor = virtualMonitor;
             virtualMonitor?.Close();
+            tray?.Dispose();
+            tray = null;
         }
 
         /// <summary>
-        /// Releases the capture resources. Called by Program after Application.Run returned: WinRT/COM calls
-        /// (e.g. closing a Windows.Graphics.Capture session) are not allowed while WM_CLOSE is being handled
-        /// as part of an input-synchronous call (RPC_E_CANTCALLOUT_ININPUTSYNCCALL when clicking "Close App").
+        /// Releases the capture resources. Called by Program after Application.Run returned: COM calls are not
+        /// allowed while WM_CLOSE is being handled as part of an input-synchronous call (RPC_E_CANTCALLOUT_ININPUTSYNCCALL).
         /// </summary>
         public void ReleaseCaptureResources()
         {
@@ -502,8 +700,7 @@ namespace ScreenshareHelper
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            // with --virtual-monitor the window stays in front, it is the frame you place over the area to show
-            if (!Program.VirtualMonitor)
+            if (mode == AppMode.Normal)
                 this.BeginInvoke(new Action(() =>
                 {
                     IntPtr currentWindow = GetForegroundWindow(); // Get the current active window
@@ -512,21 +709,29 @@ namespace ScreenshareHelper
 
             StartCapture();
             UpdateSizeDisplay();
-            if (Program.VirtualMonitor)
-                ShowVirtualMonitor();
-            
+            tray = new TrayIcon(this);
         }
+
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
             isActive = true;
-            if (!Program.VirtualMonitor)
+            if (mode == AppMode.Normal)
+            {
                 setWindowToBackground();
+                ApplyMode(AppMode.Normal);
+            }
+            else
+            {
+                Hide();
+                Opacity = 1;
+                ApplyMode(mode);
+            }
         }
 
         private void buttonCloseApp_Click(object sender, EventArgs e)
         {
-            this.Close();
+            ExitApp();
         }
 
         #endregion

@@ -18,13 +18,13 @@ namespace ScreenshareHelper.VirtualMonitor
         private ParsecVirtualDisplay display;
         private Rectangle area;
         private Size? resolution;
-        private IScreenCapture capture;
+        private ResilientCapture capture = new ResilientCapture();
         private AreaFrameForm areaFrame;
         private long lastBringToTop;
         private Bitmap frame;
         private readonly Timer captureTimer = new Timer();
         private Point lastCursorPos;
-        private string error;
+        private string shownError;
 
         public const string AutoResolution = "Auto";
 
@@ -40,17 +40,12 @@ namespace ScreenshareHelper.VirtualMonitor
                 : null;
         }
 
-        /// <summary>Asks to install the driver if it is missing. Returns false if the virtual monitor can't be used.</summary>
-        public static bool EnsureDriverInteractive()
+        /// <summary>Asks whether to install the missing driver now.</summary>
+        public static bool AskToInstallDriver()
         {
-            if (ParsecVirtualDisplay.IsDriverInstalled())
-                return true;
-
             var text = "The virtual monitor needs the free Parsec Virtual Display Driver (signed by Parsec, installed once with administrator rights).\n\n" +
-                "Download the installer now? Run it, then click the virtual monitor button again.";
-            if (MessageBox.Show(text, "ScreenshareHelper", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                Process.Start(new ProcessStartInfo(ParsecVirtualDisplay.DriverDownloadUrl) { UseShellExecute = true });
-            return false;
+                "Download and install it now?";
+            return MessageBox.Show(text, "ScreenshareHelper", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes;
         }
 
         public VirtualMonitorForm(Rectangle area, Size? resolution)
@@ -68,17 +63,10 @@ namespace ScreenshareHelper.VirtualMonitor
             display = new ParsecVirtualDisplay();
             display.Configure(area.Size, resolution);
             Bounds = display.Bounds;
-            areaFrame = new AreaFrameForm(area);
+            if (Properties.Settings.Default.ShowAreaFrame)
+                areaFrame = new AreaFrameForm(area);
 
-            try
-            {
-                capture = ScreenCaptureFactory.Create(Program.CaptureMethod);
-            }
-            catch (Exception ex)
-            {
-                FallBackToGdi(Program.CaptureMethod.ToString(), ex);
-            }
-            captureTimer.Interval = Math.Max(1, 1000 / Program.Fps);
+            captureTimer.Interval = 1000 / Program.Fps;
             captureTimer.Tick += CaptureTimer_Tick;
             captureTimer.Start();
         }
@@ -96,6 +84,30 @@ namespace ScreenshareHelper.VirtualMonitor
                 Bounds = display.Bounds;
             }
             Invalidate();
+        }
+
+        /// <summary>The red frame around the shared area on your screen.</summary>
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public bool ShowAreaFrame
+        {
+            get => areaFrame != null;
+            set
+            {
+                if (value == ShowAreaFrame)
+                    return;
+                if (value)
+                {
+                    areaFrame = new AreaFrameForm(area);
+                    if (Visible)
+                        areaFrame.Show();
+                }
+                else
+                {
+                    areaFrame.Close();
+                    areaFrame.Dispose();
+                    areaFrame = null;
+                }
+            }
         }
 
         protected override void OnShown(EventArgs e)
@@ -125,14 +137,6 @@ namespace ScreenshareHelper.VirtualMonitor
                 Bounds = display.Bounds;
         }
 
-        private void FallBackToGdi(string failedMethod, Exception ex)
-        {
-            Debug.WriteLine($"Capture method {failedMethod} failed: {ex}");
-            error = $"{failedMethod} failed ({ex.GetType().Name}: {ex.Message}) - using GDI";
-            capture?.Dispose();
-            capture = new GdiScreenCapture();
-        }
-
         private void CaptureTimer_Tick(object sender, EventArgs e)
         {
             if (capture == null || area.Width <= 0 || area.Height <= 0)
@@ -156,21 +160,15 @@ namespace ScreenshareHelper.VirtualMonitor
                 frame = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppRgb);
             }
 
-            bool changed;
-            try
-            {
-                changed = capture.Capture(area, frame);
-            }
-            catch (Exception ex)
-            {
-                FallBackToGdi(capture.Name, ex);
-                return;
-            }
+            bool changed = capture.Capture(area, frame);
+            var error = capture.Error;
+            bool errorChanged = error != shownError;
+            shownError = error;
 
             var cursorPos = Cursor.Position;
             bool cursorMoved = Program.CopyMouse && cursorPos != lastCursorPos;
             lastCursorPos = cursorPos;
-            if (changed || cursorMoved || error != null)
+            if (changed || cursorMoved || errorChanged)
                 Invalidate();
         }
 
@@ -191,10 +189,10 @@ namespace ScreenshareHelper.VirtualMonitor
 
                 if (Program.CopyMouse)
                     DrawMousePointer(g, dest);
-                if (error != null)
+                if (shownError != null)
                 {
                     using var font = new Font(FontFamily.GenericMonospace, 10f);
-                    g.DrawString(error, font, Brushes.Yellow, 3, 2);
+                    g.DrawString(shownError, font, Brushes.Yellow, 3, 2);
                 }
             }
             catch (Exception ex)
@@ -249,8 +247,7 @@ namespace ScreenshareHelper.VirtualMonitor
         }
 
         /// <summary>
-        /// Removes the monitor and releases the capture. Not done while closing: WinRT capture can't be closed
-        /// during an input-synchronous call (see Form1.ReleaseCaptureResources).
+        /// Removes the monitor and releases the capture. Not done while closing (see Form1.ReleaseCaptureResources).
         /// </summary>
         public void ReleaseResources()
         {

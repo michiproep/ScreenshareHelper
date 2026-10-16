@@ -130,5 +130,41 @@ namespace ScreenshareHelper.Properties {
                 this["VirtualMonitorResolution"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Normal")]
+        public string Mode {
+            get {
+                return ((string)(this["Mode"]));
+            }
+            set {
+                this["Mode"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowAreaFrame {
+            get {
+                return ((bool)(this["ShowAreaFrame"]));
+            }
+            set {
+                this["ShowAreaFrame"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool CopyMouse {
+            get {
+                return ((bool)(this["CopyMouse"]));
+            }
+            set {
+                this["CopyMouse"] = value;
+            }
+        }
     }
 }

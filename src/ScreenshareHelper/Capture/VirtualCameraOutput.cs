@@ -52,7 +52,7 @@ namespace ScreenshareHelper.Capture
                         return null;
                     case VirtualCameraSetupStatus.NotInstalled:
                     case VirtualCameraSetupStatus.NeedsUpdate:
-                        error = $"Virtual camera not set up - restart and confirm the setup, or run: ScreenshareHelper.exe {VirtualCameraSetup.InstallArgument}";
+                        error = "Virtual camera not set up - use Setup in the tray menu";
                         return null;
                 }
 

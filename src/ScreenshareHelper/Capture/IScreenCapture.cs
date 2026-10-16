@@ -16,21 +16,4 @@ namespace ScreenshareHelper.Capture
         /// </summary>
         bool Capture(Rectangle area, Bitmap target);
     }
-
-    public enum CaptureMethod
-    {
-        Gdi,
-        Dxgi,
-        Wgc
-    }
-
-    public static class ScreenCaptureFactory
-    {
-        public static IScreenCapture Create(CaptureMethod method) => method switch
-        {
-            CaptureMethod.Dxgi => new DxgiScreenCapture(),
-            CaptureMethod.Wgc => new WgcScreenCapture(),
-            _ => new GdiScreenCapture()
-        };
-    }
 }

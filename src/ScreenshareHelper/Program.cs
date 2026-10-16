@@ -19,13 +19,8 @@ namespace ScreenshareHelper
         private static extern bool AttachConsole(int dwProcessId);
         private const int ATTACH_PARENT_PROCESS = -1;
 
-        public static bool AutoSetOnFocusLoss = false;
         public static bool CopyMouse = true;
-        public static Capture.CaptureMethod CaptureMethod = Capture.CaptureMethod.Dxgi;
-        public static int Fps = 30;
-        public static bool ShowStats = false;
-        public static bool VirtualCamera = false;
-        public static bool VirtualMonitor = false;
+        public const int Fps = 30;
 
         [STAThread]
         static void Main(string[] args)
@@ -37,12 +32,7 @@ namespace ScreenshareHelper
                 Console.SetError(new System.IO.StreamWriter(Console.OpenStandardError()) { AutoFlush = true });
             }
 
-            // like Parser.Default, but accept e.g. "--capture wgc" in any casing
-            using var parser = new Parser(with =>
-            {
-                with.HelpWriter = Console.Error;
-                with.CaseInsensitiveEnumValues = true;
-            });
+            using var parser = new Parser(with => with.HelpWriter = Console.Error);
             var parserResult = parser.ParseArguments<Options>(args);
             if (parserResult.Tag == ParserResultType.NotParsed)
                 return;
@@ -61,14 +51,6 @@ namespace ScreenshareHelper
                         SnapToProcess(o.Process);
                     else if (o.ProcessID.HasValue)
                         SnapToProcess(o.ProcessID.Value);
-                    CopyMouse = !o.NoMouse;
-                    AutoSetOnFocusLoss = o.AutoSet;
-                    CaptureMethod = o.CaptureMethod;
-                    Fps = Math.Clamp(o.Fps, 1, 120);
-                    ShowStats = o.Stats;
-                    VirtualCamera = o.VirtualCamera;
-                    VirtualMonitor = o.VirtualMonitor;
-
                     if (!string.IsNullOrEmpty(o.Color))
                     {
                         if (TryParseColor(o.Color, out var color))
@@ -82,8 +64,7 @@ namespace ScreenshareHelper
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            if (VirtualCamera)
-                Capture.VirtualCameraSetup.EnsureInstalledInteractive(); // asks once, elevates via UAC
+            CopyMouse = Settings.Default.CopyMouse;
             var form = new Form1();
             Application.Run(form);
             form.ReleaseCaptureResources();

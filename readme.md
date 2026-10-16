@@ -28,21 +28,30 @@ Use `win-x64` (most PCs) or `win-x86`.
 
 You can actually move the tool to another screen (if you wish and got one) - once you set the capture area with the set-button. This way you can actually see what's happening 
 
+## Tray icon & modes
+The tool has an icon in the notification area (tray). Its menu switches between three modes; the tool remembers the mode and starts in it next time:
+
+- **Normal (share the window)**: as described above, the window mirrors the capture area and you share the window.
+- **Virtual camera**: no window; the capture area is a webcam (see [Virtual camera](#virtual-camera)).
+- **Virtual monitor**: no window; the area is shown on an extra (virtual) monitor that you share (see [Virtual monitor](#virtual-monitor)).
+
+More in the menu:
+- **Set area...** (or double-click the icon): shows the window so you can place it over the area to share, then click **Set** (or **Cancel**). In camera and virtual monitor mode the window disappears again afterwards and is never visible in the camera or on the virtual monitor.
+- **Red frame around the area** (virtual monitor mode): turn the frame that marks the shared area on or off.
+- **Mouse pointer**: draw the mouse pointer into the shared image or not (e.g. Google Meet draws its own).
+- **Start with Windows**: start the tool when you log in.
+- **Setup**: install or uninstall the virtual camera and the virtual monitor driver.
+- **Exit**.
+
 ## Command Line Options / SnapToProcess
 You can create a .bat file or use a desktop shortcut to add command line options to let the tool snap to a certain process on startup.
 Use process name or better process ID (MainWindow process ID) to accomplish this.
 
 -n => Process name (e.g. firefox)
 -i => PID
---no-mouse => Disable mirroring the mouse pointer.
 --color => Background color: a named color, a hex code RRGGBB/AARRGGBB, or 'Transparent'.
---auto-set => Automatically set the capture area (like clicking 'Set') when the window loses focus.
---capture => Capture method: `dxgi` (Desktop Duplication, default), `gdi` (classic, falls back to it automatically if dxgi fails) or `wgc` (Windows.Graphics.Capture).
---fps => Target frames per second (default 30).
---stats => Show capture method, frame rate and capture time in the window.
---virtual-camera => *Windows 11, x64:* also publish the capture area as a webcam named "ScreenshareHelper" (see [Virtual camera](#virtual-camera)).
---install-camera / --uninstall-camera => Set up or remove the virtual camera and exit (asks for administrator rights).
---virtual-monitor => At startup, add the virtual monitor with the area last set via "Set for virtual monitor"; the window stays in front (see [Virtual monitor](#virtual-monitor)).
+
+Everything else is in the [tray menu](#tray-icon--modes).
 
 Examples
 ```
@@ -50,20 +59,20 @@ ScreenshareHelper.exe -n notepad2
 ScreenshareHelper.exe -i 12345
 ```
 ## Virtual camera
-*Experimental, Windows 11, x64 package only.* With `--virtual-camera` the tool additionally shows the capture area as a webcam called **ScreenshareHelper** (1920×1080, scaled with black bars, including the mouse pointer). Select it as camera in Teams, Zoom or the Windows Camera app. The camera exists while the tool is running.
+*Experimental, Windows 11, x64 package only.* In the **Virtual camera** mode (tray menu) the tool shows the capture area as a webcam called **ScreenshareHelper** (1920×1080, scaled with black bars, including the mouse pointer). Select it as camera in Teams, Zoom or the Windows Camera app. The camera exists while the tool is running in that mode. Use **Set area...** to choose the area.
 
-The first time you use it, the tool offers a one-time setup: after confirming the Windows admin prompt it copies the camera component (`ScreenshareHelper.VirtualCamera.dll`) to `C:\Program Files\ScreenshareHelper\VirtualCamera` and registers it there. Windows' camera service loads it from that protected folder. After an update with a changed camera component, the tool offers to update it the same way.
+The first time you use it (or via **Setup > Install virtual camera**), the tool offers a one-time setup: after confirming the Windows admin prompt it copies the camera component (`ScreenshareHelper.VirtualCamera.dll`) to `C:\Program Files\ScreenshareHelper\VirtualCamera` and registers it there. Windows' camera service loads it from that protected folder. After an update with a changed camera component, the tool offers to update it the same way.
 
-To remove it: `ScreenshareHelper.exe --uninstall-camera`.
+To remove it: **Setup > Uninstall virtual camera**.
 
 > Camera images are compressed more than screen sharing, so small text may be less sharp than when sharing the window.
 
 ## Virtual monitor
-*Experimental.* Instead of sharing the tool's window, share a whole (virtual) screen: place the tool over the area you want to show and click **Set for virtual monitor**. The tool adds an extra monitor to Windows and shows that area on it, full screen (scaled to fit, black bars, including the mouse pointer). In Teams or Zoom, share that screen. The virtual monitor area is separate from the normal capture area ("Set"), both work at the same time. A thin red frame marks the shared area on your screen; it is click-through and not captured itself. **Remove virtual monitor** (or closing the tool) removes the monitor again.
+*Experimental.* Instead of sharing the tool's window, share a whole (virtual) screen: switch to the **Virtual monitor** mode in the tray menu, place the window over the area you want to show and click **Set**. The tool adds an extra monitor to Windows and shows that area on it, full screen (scaled to fit, black bars, including the mouse pointer). In Teams or Zoom, share that screen. The virtual monitor area is separate from the normal capture area. A thin red frame marks the shared area on your screen; it is click-through and not captured itself, and you can turn it off in the tray menu. Switching to another mode (or closing the tool) removes the monitor again.
 
-The virtual monitor needs the free [Parsec Virtual Display Driver](https://support.parsec.app/hc/en-us/articles/360054478211-Parsec-Virtual-Displays) (signed, installed once with administrator rights). If it is missing, the tool offers to download the installer. You don't need a Parsec account or the Parsec app.
+The virtual monitor needs the free [Parsec Virtual Display Driver](https://support.parsec.app/hc/en-us/articles/360054478211-Parsec-Virtual-Displays) (signed, installed once with administrator rights). If it is missing, the tool offers to download and run the installer (also in **Setup** in the tray menu, where you can uninstall it again). You don't need a Parsec account or the Parsec app.
 
-The resolution drop-down next to the button sets the monitor resolution: **1920x1080** (default, what Teams shares at most), 1280x720, 2560x1440, 3840x2160 or **Auto** (the largest resolution that fits into the area without upscaling). If the area doesn't have the monitor's aspect ratio, the image gets black bars; **16:9** makes the window 16:9 (keeps the height, adjusts the width) before you click "Set for virtual monitor".
+The resolution drop-down sets the monitor resolution: **1920x1080** (default, what Teams shares at most), 1280x720, 2560x1440, 3840x2160 or **Auto** (the largest resolution that fits into the area without upscaling). If the area doesn't have the monitor's aspect ratio, the image gets black bars; **16:9** makes the window 16:9 (keeps the height, adjusts the width) before you click "Set".
 
 The monitor is placed at the bottom-right corner of your desktop, touching the other monitors only at the corner, so your mouse can't wander onto it.
 

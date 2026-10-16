@@ -81,8 +81,21 @@ namespace ScreenshareHelper.Capture
                     System.Windows.Forms.MessageBoxIcon.Question) != System.Windows.Forms.DialogResult.Yes)
                 return false;
 
+            return InstallElevated();
+        }
+
+        /// <summary>Sets up / updates the camera via a UAC prompt. Returns true if it is installed afterwards.</summary>
+        public static bool InstallElevated()
+        {
             RunElevated(InstallArgument);
             return GetStatus() == VirtualCameraSetupStatus.Installed;
+        }
+
+        /// <summary>Removes the camera via a UAC prompt. Returns true if it is gone afterwards.</summary>
+        public static bool UninstallElevated()
+        {
+            RunElevated(UninstallArgument);
+            return string.IsNullOrEmpty(RegisteredDllPath);
         }
 
         /// <summary>Handles --install-camera / --uninstall-camera; returns the process exit code.</summary>
