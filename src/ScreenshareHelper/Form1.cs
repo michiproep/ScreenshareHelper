@@ -30,6 +30,7 @@ namespace ScreenshareHelper
         private bool closing;
         private bool exiting;
         private bool busy; // installer running
+        private IntPtr windowBeforeSetArea;
 
         public Form1()
         {
@@ -331,6 +332,8 @@ namespace ScreenshareHelper
                     area = new Rectangle(100, 100, 800, 450);
                 UpdateSizeBox();
                 Bounds = area;
+                if (!Visible)
+                    windowBeforeSetArea = GetForegroundWindow();
             }
             Show();
             Activate();
@@ -340,6 +343,10 @@ namespace ScreenshareHelper
         private void EndSetArea()
         {
             Hide();
+            // otherwise Windows activates the next window in line, the (click-through) red frame
+            if (windowBeforeSetArea != IntPtr.Zero)
+                SetForegroundWindow(windowBeforeSetArea);
+            windowBeforeSetArea = IntPtr.Zero;
             // nothing to share without a virtual monitor area
             if (mode == AppMode.VirtualMonitor && virtualMonitor == null)
                 ApplyMode(AppMode.Normal);
