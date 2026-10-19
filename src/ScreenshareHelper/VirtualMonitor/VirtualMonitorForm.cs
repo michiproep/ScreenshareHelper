@@ -71,6 +71,9 @@ namespace ScreenshareHelper.VirtualMonitor
             captureTimer.Start();
         }
 
+        /// <summary>False if the virtual monitor was lost (see <see cref="ParsecVirtualDisplay.IsAlive"/>).</summary>
+        public bool IsAlive => display != null && display.IsAlive;
+
         /// <summary>Shows another area and/or switches the resolution (with Auto also when the area size changed).</summary>
         public void SetArea(Rectangle newArea, Size? newResolution)
         {

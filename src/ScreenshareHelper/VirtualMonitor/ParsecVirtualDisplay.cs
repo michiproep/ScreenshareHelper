@@ -74,6 +74,13 @@ namespace ScreenshareHelper.VirtualMonitor
             }
         }
 
+        /// <summary>
+        /// False once the monitor is gone, e.g. after resume from hibernation or a driver reset: the driver then no longer
+        /// knows our handle, but pings and Bounds fail silently.
+        /// </summary>
+        public bool IsAlive => !disposed && !device.IsInvalid && !device.IsClosed
+            && ParsecDisplayNames().Contains(DeviceName);
+
         /// <summary>Monitor bounds in virtual desktop coordinates (physical pixels).</summary>
         public Rectangle Bounds
         {

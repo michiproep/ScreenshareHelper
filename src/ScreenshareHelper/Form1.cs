@@ -21,6 +21,7 @@ namespace ScreenshareHelper
         private ResilientCapture capture;
         private Bitmap frame;
         private readonly System.Windows.Forms.Timer captureTimer = new System.Windows.Forms.Timer();
+        private readonly System.Windows.Forms.Timer virtualMonitorWatchdog = new System.Windows.Forms.Timer();
         private Point lastCursorPos;
         private string shownError;
         private VirtualCameraOutput virtualCamera;
@@ -549,7 +550,7 @@ namespace ScreenshareHelper
         }
 
         /// <summary>Adds the virtual monitor (or updates its area) showing the virtual monitor area. False if there is none.</summary>
-        private bool ShowVirtualMonitor()
+        private bool ShowVirtualMonitor(bool quiet = false)
         {
             var area = new Rectangle(Settings.Default.VirtualMonitorLocation, Settings.Default.VirtualMonitorSize);
             if (area.Width <= 0 || area.Height <= 0)
@@ -574,9 +575,33 @@ namespace ScreenshareHelper
                 Debug.WriteLine(ex);
                 virtualMonitor?.ReleaseResources();
                 virtualMonitor = null;
-                MessageBox.Show($"The virtual monitor could not be created: {ex.Message}", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (!quiet)
+                    MessageBox.Show($"The virtual monitor could not be created: {ex.Message}", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// The driver loses the virtual monitor on resume from hibernation (and driver resets): add it again.
+        /// Failures are silent, the next check retries.
+        /// </summary>
+        private void VirtualMonitorWatchdog_Tick(object sender, EventArgs e)
+        {
+            // hidden window = not in "Set area"; busy = installer running
+            if (mode != AppMode.VirtualMonitor || busy || Visible || closing)
+                return;
+            if (virtualMonitor != null && virtualMonitor.IsAlive)
+                return;
+
+            var lost = virtualMonitor;
+            virtualMonitor = null;
+            if (lost != null)
+            {
+                lost.Close();
+                // right away: a late release could remove the new monitor, the driver numbers them from 0
+                lost.ReleaseResources();
+            }
+            ShowVirtualMonitor(quiet: true);
         }
 
         private void VirtualMonitor_FormClosed(object sender, FormClosedEventArgs e)
@@ -676,6 +701,7 @@ namespace ScreenshareHelper
             if (mode == AppMode.Normal)
                 SaveWindowPosition();
             captureTimer.Stop();
+            virtualMonitorWatchdog.Stop();
             closingVirtualMonitor = virtualMonitor;
             virtualMonitor?.Close();
             tray?.Dispose();
@@ -717,6 +743,10 @@ namespace ScreenshareHelper
             StartCapture();
             UpdateSizeDisplay();
             tray = new TrayIcon(this);
+
+            virtualMonitorWatchdog.Interval = 10000;
+            virtualMonitorWatchdog.Tick += VirtualMonitorWatchdog_Tick;
+            virtualMonitorWatchdog.Start();
         }
 
         protected override void OnShown(EventArgs e)
