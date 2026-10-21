@@ -81,6 +81,8 @@ namespace ScreenshareHelper
             uninstallDriver.Enabled = !busy && ParsecDriverSetup.CanUninstall;
         }
 
+        public void ShowInfo(string text) => icon.ShowBalloonTip(5000, "ScreenshareHelper", text, ToolTipIcon.Info);
+
         private static bool Autostart
         {
             get

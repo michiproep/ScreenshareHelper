@@ -265,7 +265,8 @@ namespace ScreenshareHelper.VirtualMonitor
         #endregion
 
         #region Display enumeration
-        private static IEnumerable<(string name, Rectangle bounds, string monitorId)> AttachedDisplays()
+        /// <summary>Monitors attached to the desktop: GDI device name, bounds (physical pixels), monitor DeviceID.</summary>
+        internal static IEnumerable<(string name, Rectangle bounds, string monitorId)> AttachedDisplays()
         {
             var adapter = new DISPLAY_DEVICE { cb = Marshal.SizeOf<DISPLAY_DEVICE>() };
             for (uint i = 0; EnumDisplayDevices(null, i, ref adapter, 0); i++)
@@ -284,8 +285,11 @@ namespace ScreenshareHelper.VirtualMonitor
             }
         }
 
+        /// <summary>True for a monitor (DISPLAY_DEVICE.DeviceID) created by the Parsec driver.</summary>
+        internal static bool IsVirtualMonitor(string monitorId) => monitorId.Contains(MonitorId, StringComparison.OrdinalIgnoreCase);
+
         private static HashSet<string> ParsecDisplayNames() => AttachedDisplays()
-            .Where(d => d.monitorId.Contains(MonitorId, StringComparison.OrdinalIgnoreCase))
+            .Where(d => IsVirtualMonitor(d.monitorId))
             .Select(d => d.name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 

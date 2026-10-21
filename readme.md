@@ -43,6 +43,9 @@ More in the menu:
 - **Setup**: install or uninstall the virtual camera and the virtual monitor driver.
 - **Exit**.
 
+### Different monitor setups
+The areas are remembered per monitor setup (which monitors are connected, their arrangement and resolution). If you use your laptop with different docking stations, or with the lid closed, each setup keeps its own areas and they are restored when you connect to that setup again. On a new setup the tool keeps the last areas if they still lie on a monitor; otherwise it moves them to the primary monitor and asks you to set the area.
+
 ## Command Line Options / SnapToProcess
 You can create a .bat file or use a desktop shortcut to add command line options to let the tool snap to a certain process on startup.
 Use process name or better process ID (MainWindow process ID) to accomplish this.

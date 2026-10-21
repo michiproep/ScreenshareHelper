@@ -22,6 +22,8 @@ namespace ScreenshareHelper
         private Bitmap frame;
         private readonly System.Windows.Forms.Timer captureTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer virtualMonitorWatchdog = new System.Windows.Forms.Timer();
+        private readonly System.Windows.Forms.Timer layoutSettleTimer = new System.Windows.Forms.Timer();
+        private AreaProfiles.Change startupLayoutChange;
         private Point lastCursorPos;
         private string shownError;
         private VirtualCameraOutput virtualCamera;
@@ -40,6 +42,15 @@ namespace ScreenshareHelper
             FormBorderStyle = FormBorderStyle.None;
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.TransparencyKey = transKey;
+
+            // camera / virtual monitor mode: no window at start (it is shown invisibly once, then hidden in OnShown)
+            if (!Enum.TryParse(Settings.Default.Mode, out mode))
+                mode = AppMode.Normal;
+            if (mode != AppMode.Normal)
+                Opacity = 0;
+
+            // the monitors may have changed since the last run (other dock, lid closed)
+            startupLayoutChange = AreaProfiles.Update(mode);
             RestoreWindowPosition();
             var configuredColor = Settings.Default.BackgroundColor;
             // TransparencyKey must stay an opaque sentinel (alpha=0 breaks GDI+ text rendering), so map the
@@ -54,12 +65,6 @@ namespace ScreenshareHelper
             if (comboVirtualMonitorResolution.SelectedIndex < 0)
                 comboVirtualMonitorResolution.SelectedItem = "1920x1080";
             this.SizeChanged += Form1_SizeChanged;
-
-            // camera / virtual monitor mode: no window at start (it is shown invisibly once, then hidden in OnShown)
-            if (!Enum.TryParse(Settings.Default.Mode, out mode))
-                mode = AppMode.Normal;
-            if (mode != AppMode.Normal)
-                Opacity = 0;
         }
 
         public AppMode Mode => mode;
@@ -530,7 +535,7 @@ namespace ScreenshareHelper
         {
             Settings.Default.CaptureLocation = this.Location;
             Settings.Default.CaptureSize = this.Size;
-            Settings.Default.Save();
+            SaveWindowPosition(); // also saves; the area profile of this monitor layout takes the window position from the settings
 
             setWindowToBackground();
         }
@@ -602,6 +607,49 @@ namespace ScreenshareHelper
                 lost.ReleaseResources();
             }
             ShowVirtualMonitor(quiet: true);
+        }
+
+        private void SystemEvents_DisplaySettingsChanged(object sender, EventArgs e)
+        {
+            // Windows goes through several intermediate layouts while a dock connects: wait until it settles
+            if (IsHandleCreated && !closing)
+                BeginInvoke(new Action(() =>
+                {
+                    layoutSettleTimer.Stop();
+                    layoutSettleTimer.Start();
+                }));
+        }
+
+        /// <summary>Switches to the areas of the new monitor layout (see <see cref="AreaProfiles"/>).</summary>
+        private void LayoutSettleTimer_Tick(object sender, EventArgs e)
+        {
+            layoutSettleTimer.Stop();
+            if (closing)
+                return;
+            var change = AreaProfiles.Update(mode);
+            if (change == AreaProfiles.Change.None)
+                return;
+
+            if (mode == AppMode.Normal)
+            {
+                RestoreWindowPosition();
+                if (!isActive && Settings.Default.CaptureSize.Width > 0 && Settings.Default.CaptureSize.Height > 0)
+                    Size = Settings.Default.CaptureSize;
+                Invalidate();
+            }
+            else if (mode == AppMode.VirtualMonitor && virtualMonitor != null)
+                ShowVirtualMonitor(quiet: true);
+            // camera: the capture reads the area from the settings
+
+            if (change == AreaProfiles.Change.Moved)
+                PromptForNewArea();
+        }
+
+        /// <summary>The area was not on any monitor of the new layout and was moved to the primary monitor.</summary>
+        private void PromptForNewArea()
+        {
+            tray?.ShowInfo("New monitor setup: please set the area to share.");
+            BeginSetArea();
         }
 
         private void VirtualMonitor_FormClosed(object sender, FormClosedEventArgs e)
@@ -702,6 +750,8 @@ namespace ScreenshareHelper
                 SaveWindowPosition();
             captureTimer.Stop();
             virtualMonitorWatchdog.Stop();
+            layoutSettleTimer.Stop();
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
             closingVirtualMonitor = virtualMonitor;
             virtualMonitor?.Close();
             tray?.Dispose();
@@ -747,6 +797,10 @@ namespace ScreenshareHelper
             virtualMonitorWatchdog.Interval = 10000;
             virtualMonitorWatchdog.Tick += VirtualMonitorWatchdog_Tick;
             virtualMonitorWatchdog.Start();
+
+            layoutSettleTimer.Interval = 2000;
+            layoutSettleTimer.Tick += LayoutSettleTimer_Tick;
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
         }
 
         protected override void OnShown(EventArgs e)
@@ -764,6 +818,8 @@ namespace ScreenshareHelper
                 Opacity = 1;
                 ApplyMode(mode);
             }
+            if (startupLayoutChange == AreaProfiles.Change.Moved)
+                BeginInvoke(new Action(PromptForNewArea));
         }
 
         private void buttonCloseApp_Click(object sender, EventArgs e)

@@ -166,5 +166,31 @@ namespace ScreenshareHelper.Properties {
                 this["CopyMouse"] = value;
             }
         }
+
+        /// <summary>Monitor layout the areas in these settings belong to, see AreaProfiles.</summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string AreaLayout {
+            get {
+                return ((string)(this["AreaLayout"]));
+            }
+            set {
+                this["AreaLayout"] = value;
+            }
+        }
+
+        /// <summary>Areas of the other monitor layouts (JSON), see AreaProfiles.</summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string AreaProfiles {
+            get {
+                return ((string)(this["AreaProfiles"]));
+            }
+            set {
+                this["AreaProfiles"] = value;
+            }
+        }
     }
 }

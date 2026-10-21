@@ -7,6 +7,7 @@ Small Windows Forms tool (.NET 10, `net10.0-windows`) that mirrors a chosen scre
 - `src/ScreenshareHelper/Program.cs` – entry point, CLI parsing (CommandLineParser), `--color` parsing, SnapToProcess via Win32/DWM
 - `src/ScreenshareHelper/Options.cs` – command line options (`-n`, `-i`, `--color`; hidden `--install-camera`/`--uninstall-camera` used for the elevated restart). Everything else is in the tray menu
 - `src/ScreenshareHelper/Form1.cs` – the capture window and mode logic (`AppMode`: Normal / Camera / VirtualMonitor, remembered in settings; window hidden in camera/vmon mode except for "Set area"): timer-driven rendering, mouse pointer mirroring, "Set" button, position persistence
+- `src/ScreenshareHelper/AreaProfiles.cs` – areas (absolute desktop coordinates) remembered per monitor layout; checked at start and on `DisplaySettingsChanged` (debounced)
 - `src/ScreenshareHelper/TrayIcon.cs` – tray menu: mode switch, Set area, red frame / mouse toggles, Start with Windows (HKCU Run key), Setup (install/uninstall camera and Parsec driver), Exit
 - `src/ScreenshareHelper/Capture/` – capture behind `IScreenCapture`: `ResilientCapture` = DXGI Desktop Duplication (Vortice.Direct3D11) with GDI as stand-in, errors are retried (not a permanent fallback)
 - `src/ScreenshareHelper/VirtualMonitor/` – virtual monitor via the separately installed Parsec Virtual Display Driver (IOCTL add/remove/keep-alive ping), `ParsecDriverSetup` runs Parsec's installer/uninstaller, full-screen form showing its own area
