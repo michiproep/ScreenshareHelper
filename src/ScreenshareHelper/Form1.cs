@@ -469,14 +469,24 @@ namespace ScreenshareHelper
             busy = true;
             try
             {
-                bool running = await ParsecDriverSetup.RestartAsync();
+                var result = await ParsecDriverSetup.RestartAsync();
                 busy = false;
-                if (running)
-                    tray?.SetDriverWarning(false);
-                if (running && switchToVirtualMonitor)
-                    ApplyMode(AppMode.VirtualMonitor);
-                else if (!running)
-                    MessageBox.Show("The Parsec Virtual Display Driver is still not running. Restarting Windows usually helps; otherwise uninstall and reinstall it (tray menu > Setup).", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                switch (result)
+                {
+                    case ParsecDriverSetup.RestartResult.Running:
+                        tray?.SetDriverWarning(false);
+                        if (switchToVirtualMonitor)
+                            ApplyMode(AppMode.VirtualMonitor);
+                        break;
+                    case ParsecDriverSetup.RestartResult.Cancelled:
+                        break; // UAC prompt declined: the tray menu (Setup > Repair) still offers it
+                    case ParsecDriverSetup.RestartResult.RebootRequired:
+                        MessageBox.Show("The Parsec Virtual Display Driver can only be restarted together with Windows. Please restart Windows.", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        break;
+                    default:
+                        MessageBox.Show("The Parsec Virtual Display Driver is still not running. Restarting Windows usually helps; otherwise uninstall and reinstall it (tray menu > Setup).", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        break;
+                }
             }
             catch (Exception ex)
             {
