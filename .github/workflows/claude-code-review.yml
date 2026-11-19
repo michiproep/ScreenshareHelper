@@ -12,6 +12,9 @@ on:
 
 jobs:
   claude-review:
+    # Fork PRs get no secrets/OIDC token on `pull_request`, so the action can't run there.
+    # For those, comment "@claude review this PR" instead (handled by claude.yml).
+    if: github.event.pull_request.head.repo.full_name == github.repository
     # Optional: Filter by PR author
     # if: |
     #   github.event.pull_request.user.login == 'external-contributor' ||
