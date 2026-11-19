@@ -361,8 +361,8 @@ namespace ScreenshareHelper
             if (windowBeforeSetArea != IntPtr.Zero)
                 SetForegroundWindow(windowBeforeSetArea);
             windowBeforeSetArea = IntPtr.Zero;
-            // nothing to share without a virtual monitor area
-            if (mode == AppMode.VirtualMonitor && virtualMonitor == null)
+            // nothing to share without a virtual monitor area (unless the watchdog is just re-creating it)
+            if (mode == AppMode.VirtualMonitor && virtualMonitor == null && !watchdogBusy)
                 ApplyMode(AppMode.Normal);
         }
 
@@ -601,6 +601,10 @@ namespace ScreenshareHelper
                 virtualMonitor.SetArea(area, resolution);
                 return true;
             }
+            // the watchdog is re-creating it right now (from the settings, so it gets this area too); a second one
+            // would race with it: the driver numbers the monitors from 0, a pending removal could hit the new one
+            if (watchdogBusy)
+                return true;
 
             try
             {
@@ -640,6 +644,7 @@ namespace ScreenshareHelper
                 return;
 
             watchdogBusy = true;
+            bool offerRepair = false;
             try
             {
                 var current = virtualMonitor;
@@ -676,37 +681,44 @@ namespace ScreenshareHelper
                 watchdogFailures = 0;
                 repairOffered = false;
                 tray?.SetDriverWarning(false);
+
+                // "Set" or the resolution drop-down may have changed the settings meanwhile
+                var latestArea = new Rectangle(Settings.Default.VirtualMonitorLocation, Settings.Default.VirtualMonitorSize);
+                var latestResolution = VirtualMonitorForm.ParseResolution(Settings.Default.VirtualMonitorResolution);
+                if (latestArea != area || latestResolution != resolution)
+                    form.SetArea(latestArea, latestResolution);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(ex);
                 watchdogFailures++;
-                await OfferDriverRepairAsync();
+                offerRepair = !repairOffered && mode == AppMode.VirtualMonitor
+                    && (watchdogFailures >= 3 || await Task.Run(() => ParsecDriverSetup.IsBroken));
+                if (offerRepair)
+                    repairOffered = true;
             }
             finally
             {
                 watchdogBusy = false;
             }
+            // outside the busy section: a successful repair re-creates the monitor right away
+            if (offerRepair)
+                OfferDriverRepair();
         }
 
         /// <summary>
         /// The driver died (adapter cannot be opened, e.g. Device Manager error 43) or stopped responding while the
         /// virtual monitor was in use: offer to restart it. Restarting a device needs administrator rights (UAC).
         /// </summary>
-        private async Task OfferDriverRepairAsync()
+        private void OfferDriverRepair()
         {
-            if (repairOffered || closing || mode != AppMode.VirtualMonitor)
+            if (closing || mode != AppMode.VirtualMonitor)
                 return;
-            bool broken = await Task.Run(() => ParsecDriverSetup.IsBroken);
-            if (!broken && watchdogFailures < 3)
-                return;
-
-            repairOffered = true;
             if (VirtualCameraSetup.IsElevated)
             {
                 // no UAC prompt as administrator: restart right away
                 tray?.ShowInfo("The Parsec driver is not working, restarting it...");
-                await RepairDriverAsync(switchToVirtualMonitor: true);
+                _ = RepairDriverAsync(switchToVirtualMonitor: true);
                 return;
             }
             // no dialog: it would pop up in the middle of a presentation
