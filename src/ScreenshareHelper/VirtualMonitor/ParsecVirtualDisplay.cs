@@ -202,22 +202,29 @@ namespace ScreenshareHelper.VirtualMonitor
                 if (device.IsInvalid || device.IsClosed)
                     return -1;
 
-                byte* input = stackalloc byte[32];
-                new Span<byte>(input, 32).Clear();
-                data.AsSpan(0, Math.Min(data.Length, 32)).CopyTo(new Span<byte>(input, 32));
-                uint output = 0;
+                // one block: 32 bytes input, 4 bytes output, the OVERLAPPED; on the heap because a request that the
+                // driver does not complete must be abandoned without it writing into a dead stack frame
+                int overlappedOffset = 40;
+                byte* block = (byte*)NativeMemory.AllocZeroed((nuint)(overlappedOffset + sizeof(NativeOverlapped)));
+                data.AsSpan(0, Math.Min(data.Length, 32)).CopyTo(new Span<byte>(block, 32));
+                uint* output = (uint*)(block + 32);
+                var overlapped = (NativeOverlapped*)(block + overlappedOffset);
                 using var completed = new ManualResetEvent(false);
-                var overlapped = new NativeOverlapped { EventHandle = completed.SafeWaitHandle.DangerousGetHandle() };
+                overlapped->EventHandle = completed.SafeWaitHandle.DangerousGetHandle();
 
-                DeviceIoControl(device, code, input, 32, &output, sizeof(uint), null, &overlapped);
-                if (!GetOverlappedResultEx(device, &overlapped, out _, 5000, false))
+                DeviceIoControl(device, code, block, 32, output, sizeof(uint), null, overlapped);
+                if (GetOverlappedResultEx(device, overlapped, out _, 5000, false))
                 {
-                    // don't leave the driver writing into this stack frame
-                    CancelIoEx(device, &overlapped);
-                    GetOverlappedResult(device, &overlapped, out _, true);
-                    return -1;
+                    int result = (int)*output;
+                    NativeMemory.Free(block);
+                    return result;
                 }
-                return (int)output;
+
+                CancelIoEx(device, overlapped);
+                // a driver that does not even complete the cancelled request is wedged: leak the block rather than hang
+                if (GetOverlappedResultEx(device, overlapped, out _, 1000, false) || Marshal.GetLastWin32Error() != WAIT_TIMEOUT)
+                    NativeMemory.Free(block);
+                return -1;
             }
         }
 
@@ -304,6 +311,7 @@ namespace ScreenshareHelper.VirtualMonitor
         private const uint GENERIC_WRITE = 0x40000000;
         private const uint FILE_SHARE_READ = 0x1;
         private const uint FILE_SHARE_WRITE = 0x2;
+        private const int WAIT_TIMEOUT = 258;
         private const uint OPEN_EXISTING = 3;
         private const uint FILE_ATTRIBUTE_NORMAL = 0x80;
         private const uint FILE_FLAG_NO_BUFFERING = 0x20000000;
@@ -394,9 +402,6 @@ namespace ScreenshareHelper.VirtualMonitor
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool GetOverlappedResultEx(SafeFileHandle file, NativeOverlapped* overlapped, out uint bytesTransferred, uint milliseconds, bool alertable);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool GetOverlappedResult(SafeFileHandle file, NativeOverlapped* overlapped, out uint bytesTransferred, bool wait);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CancelIoEx(SafeFileHandle file, NativeOverlapped* overlapped);

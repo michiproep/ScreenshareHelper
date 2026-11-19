@@ -1,4 +1,7 @@
 using System;
+using System.Drawing;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Microsoft.Win32;
 using ScreenshareHelper.Capture;
@@ -16,6 +19,9 @@ namespace ScreenshareHelper
         private readonly NotifyIcon icon;
         private readonly ToolStripMenuItem normal, camera, virtualMonitor, setArea, areaFrame, mouse, autostart;
         private readonly ToolStripMenuItem installCamera, uninstallCamera, installDriver, uninstallDriver;
+        private Action balloonAction; // what clicking the current notification does
+        private bool driverWarning;
+        private Icon warningIcon;
 
         public TrayIcon(Form1 owner)
         {
@@ -31,7 +37,13 @@ namespace ScreenshareHelper
 
             installCamera = new ToolStripMenuItem("Install virtual camera", null, (s, e) => owner.InstallCamera());
             uninstallCamera = new ToolStripMenuItem("Uninstall virtual camera", null, (s, e) => owner.UninstallCamera());
-            installDriver = new ToolStripMenuItem("Install virtual monitor driver (Parsec)", null, async (s, e) => await owner.InstallDriverAsync(switchToVirtualMonitor: false));
+            installDriver = new ToolStripMenuItem("Install virtual monitor driver (Parsec)", null, async (s, e) =>
+            {
+                if (owner.DriverNeedsRepair)
+                    await owner.RepairDriverAsync(switchToVirtualMonitor: false);
+                else
+                    await owner.InstallDriverAsync(switchToVirtualMonitor: false);
+            });
             uninstallDriver = new ToolStripMenuItem("Uninstall virtual monitor driver (Parsec)", null, async (s, e) => await owner.UninstallDriverAsync());
             var setup = new ToolStripMenuItem("Setup");
             setup.DropDownItems.AddRange(new ToolStripItem[] { installCamera, uninstallCamera, new ToolStripSeparator(), installDriver, uninstallDriver });
@@ -53,8 +65,27 @@ namespace ScreenshareHelper
                 ContextMenuStrip = menu,
                 Visible = true
             };
-            icon.DoubleClick += (s, e) => owner.BeginSetArea();
+            icon.DoubleClick += (s, e) =>
+            {
+                menu.Close(); // opened by the first click
+                owner.BeginSetArea();
+            };
+            icon.MouseClick += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                    ShowMenu();
+            };
+            icon.BalloonTipClicked += (s, e) =>
+            {
+                var action = balloonAction;
+                balloonAction = null;
+                action?.Invoke();
+            };
         }
+
+        /// <summary>Opens the menu like a right click does (positioned at the tray, closes when clicking elsewhere).</summary>
+        private void ShowMenu() =>
+            typeof(NotifyIcon).GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic)?.Invoke(icon, null);
 
         private void UpdateItems()
         {
@@ -77,11 +108,61 @@ namespace ScreenshareHelper
             normal.Enabled &= !busy;
             camera.Enabled &= !busy;
             virtualMonitor.Enabled = !busy;
-            installDriver.Enabled = !busy && !ParsecDriverSetup.IsInstalled;
+            bool needsRepair = owner.DriverNeedsRepair;
+            installDriver.Text = needsRepair ? "Repair virtual monitor driver (Parsec)" : "Install virtual monitor driver (Parsec)";
+            installDriver.Enabled = !busy && (needsRepair || !ParsecDriverSetup.IsInstalled);
             uninstallDriver.Enabled = !busy && ParsecDriverSetup.CanUninstall;
         }
 
-        public void ShowInfo(string text) => icon.ShowBalloonTip(5000, "ScreenshareHelper", text, ToolTipIcon.Info);
+        public void ShowInfo(string text)
+        {
+            balloonAction = null;
+            icon.ShowBalloonTip(5000, "ScreenshareHelper", text, ToolTipIcon.Info);
+        }
+
+        /// <summary>A notification that runs <paramref name="onClick"/> when clicked: unlike a dialog it doesn't interrupt a presentation.</summary>
+        public void ShowAction(string text, Action onClick)
+        {
+            // not cleared on BalloonTipClosed: that arrives late, also for a balloon replaced by this one
+            balloonAction = onClick;
+            icon.ShowBalloonTip(15000, "ScreenshareHelper", text, ToolTipIcon.Warning);
+        }
+
+        /// <summary>Marks the tray icon with a warning sign while the virtual monitor driver is not working.</summary>
+        public void SetDriverWarning(bool on)
+        {
+            if (!on)
+                balloonAction = null;
+            if (on == driverWarning)
+                return;
+            driverWarning = on;
+            warningIcon ??= CreateWarningIcon(owner.Icon);
+            icon.Icon = on ? warningIcon : owner.Icon;
+            icon.Text = on ? "ScreenshareHelper - Parsec driver not working" : "ScreenshareHelper";
+        }
+
+        private static Icon CreateWarningIcon(Icon appIcon)
+        {
+            var size = SystemInformation.SmallIconSize;
+            using var bitmap = new Bitmap(size.Width, size.Height);
+            using (var graphics = Graphics.FromImage(bitmap))
+            using (var app = new Icon(appIcon, size))
+            using (var warning = SystemIcons.GetStockIcon(StockIconId.Warning, StockIconOptions.SmallIcon))
+            {
+                graphics.DrawIcon(app, new Rectangle(Point.Empty, size));
+                int badge = size.Width * 5 / 8;
+                graphics.DrawIcon(warning, new Rectangle(size.Width - badge, size.Height - badge, badge, badge));
+            }
+            var handle = bitmap.GetHicon();
+            try
+            {
+                return (Icon)Icon.FromHandle(handle).Clone();
+            }
+            finally
+            {
+                DestroyIcon(handle);
+            }
+        }
 
         private static bool Autostart
         {
@@ -105,6 +186,12 @@ namespace ScreenshareHelper
             icon.Visible = false;
             icon.ContextMenuStrip?.Dispose();
             icon.Dispose();
+            warningIcon?.Dispose();
         }
+
+        #region Win32
+        [DllImport("user32.dll")]
+        private static extern bool DestroyIcon(IntPtr handle);
+        #endregion
     }
 }
