@@ -616,27 +616,62 @@ namespace ScreenshareHelper
             }
         }
 
+        private bool watchdogBusy;
+
         /// <summary>
         /// The driver loses the virtual monitor on resume from hibernation (and driver resets): add it again.
+        /// The driver calls can block for many seconds when it is stuck, so they never run on the UI thread.
         /// Failures are silent, the next check retries.
         /// </summary>
-        private void VirtualMonitorWatchdog_Tick(object sender, EventArgs e)
+        private async void VirtualMonitorWatchdog_Tick(object sender, EventArgs e)
         {
             // hidden window = not in "Set area"; busy = installer running
-            if (mode != AppMode.VirtualMonitor || busy || Visible || closing)
-                return;
-            if (virtualMonitor != null && virtualMonitor.IsAlive)
+            if (mode != AppMode.VirtualMonitor || busy || Visible || closing || watchdogBusy)
                 return;
 
-            var lost = virtualMonitor;
-            virtualMonitor = null;
-            if (lost != null)
+            watchdogBusy = true;
+            try
             {
-                lost.Close();
-                // right away: a late release could remove the new monitor, the driver numbers them from 0
-                lost.ReleaseResources();
+                var current = virtualMonitor;
+                if (current != null && await Task.Run(() => current.IsAlive))
+                    return;
+                if (closing || virtualMonitor != current)
+                    return;
+
+                virtualMonitor = null;
+                if (current != null)
+                {
+                    current.Close();
+                    // wait for the removal: a late release could remove the new monitor, the driver numbers them from 0
+                    await current.ReleaseResourcesAsync();
+                }
+                if (closing || mode != AppMode.VirtualMonitor || virtualMonitor != null)
+                    return;
+
+                var area = new Rectangle(Settings.Default.VirtualMonitorLocation, Settings.Default.VirtualMonitorSize);
+                if (area.Width <= 0 || area.Height <= 0)
+                    return;
+                var resolution = VirtualMonitorForm.ParseResolution(Settings.Default.VirtualMonitorResolution);
+                var display = await Task.Run(() => VirtualMonitorForm.CreateDisplay(area, resolution));
+                if (closing || mode != AppMode.VirtualMonitor || virtualMonitor != null)
+                {
+                    _ = Task.Run(display.Dispose);
+                    return;
+                }
+
+                var form = new VirtualMonitorForm(area, resolution, display);
+                form.FormClosed += VirtualMonitor_FormClosed;
+                virtualMonitor = form;
+                form.Show();
             }
-            ShowVirtualMonitor(quiet: true);
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+            finally
+            {
+                watchdogBusy = false;
+            }
         }
 
         private void SystemEvents_DisplaySettingsChanged(object sender, EventArgs e)

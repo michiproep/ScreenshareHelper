@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ScreenshareHelper.Capture;
 
@@ -55,7 +56,8 @@ namespace ScreenshareHelper.VirtualMonitor
             return MessageBox.Show(text, "ScreenshareHelper", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes;
         }
 
-        public VirtualMonitorForm(Rectangle area, Size? resolution)
+        /// <param name="display">A display created by <see cref="CreateDisplay"/>; null creates it here (blocks the caller).</param>
+        public VirtualMonitorForm(Rectangle area, Size? resolution, ParsecVirtualDisplay display = null)
         {
             this.area = area;
             this.resolution = resolution;
@@ -67,15 +69,30 @@ namespace ScreenshareHelper.VirtualMonitor
             BackColor = Color.Black;
             DoubleBuffered = true;
 
-            display = new ParsecVirtualDisplay();
-            display.Configure(area.Size, resolution);
-            Bounds = display.Bounds;
+            this.display = display ?? CreateDisplay(area, resolution);
+            Bounds = this.display.Bounds;
             if (Properties.Settings.Default.ShowAreaFrame)
                 areaFrame = new AreaFrameForm(area);
 
             captureTimer.Interval = 1000 / Program.Fps;
             captureTimer.Tick += CaptureTimer_Tick;
             captureTimer.Start();
+        }
+
+        /// <summary>Plugs in and configures a virtual monitor. Can block for many seconds if the driver is stuck: not for the UI thread.</summary>
+        public static ParsecVirtualDisplay CreateDisplay(Rectangle area, Size? resolution)
+        {
+            var display = new ParsecVirtualDisplay();
+            try
+            {
+                display.Configure(area.Size, resolution);
+                return display;
+            }
+            catch
+            {
+                display.Dispose();
+                throw;
+            }
         }
 
         /// <summary>False if the virtual monitor was lost (see <see cref="ParsecVirtualDisplay.IsAlive"/>).</summary>
@@ -259,7 +276,10 @@ namespace ScreenshareHelper.VirtualMonitor
         /// <summary>
         /// Removes the monitor and releases the capture. Not done while closing (see Form1.ReleaseCaptureResources).
         /// </summary>
-        public void ReleaseResources()
+        public void ReleaseResources() => ReleaseResourcesAsync().GetAwaiter().GetResult();
+
+        /// <summary>Like <see cref="ReleaseResources"/>, but removing the monitor from the driver does not block the calling (UI) thread.</summary>
+        public Task ReleaseResourcesAsync()
         {
             captureTimer.Stop();
             try
@@ -273,10 +293,11 @@ namespace ScreenshareHelper.VirtualMonitor
             capture = null;
             areaFrame?.Dispose();
             areaFrame = null;
-            display?.Dispose();
+            var removed = display;
             display = null;
             frame?.Dispose();
             frame = null;
+            return removed == null ? Task.CompletedTask : Task.Run(removed.Dispose);
         }
 
         #region Win32
