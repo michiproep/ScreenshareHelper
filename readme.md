@@ -29,7 +29,7 @@ Use `win-x64` (most PCs) or `win-x86`.
 You can actually move the tool to another screen (if you wish and got one) - once you set the capture area with the set-button. This way you can actually see what's happening 
 
 ## Tray icon & modes
-The tool has an icon in the notification area (tray). Its menu switches between three modes; the tool remembers the mode and starts in it next time:
+The tool has an icon in the notification area (tray); left- or right-click it for the menu. The menu switches between three modes; the tool remembers the mode and starts in it next time:
 
 - **Normal (share the window)**: as described above, the window mirrors the capture area and you share the window.
 - **Virtual camera**: no window; the capture area is a webcam (see [Virtual camera](#virtual-camera)).

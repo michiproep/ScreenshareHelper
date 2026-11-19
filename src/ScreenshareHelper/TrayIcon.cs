@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Windows.Forms;
 using Microsoft.Win32;
 using ScreenshareHelper.Capture;
@@ -59,8 +60,21 @@ namespace ScreenshareHelper
                 ContextMenuStrip = menu,
                 Visible = true
             };
-            icon.DoubleClick += (s, e) => owner.BeginSetArea();
+            icon.DoubleClick += (s, e) =>
+            {
+                menu.Close(); // opened by the first click
+                owner.BeginSetArea();
+            };
+            icon.MouseClick += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                    ShowMenu();
+            };
         }
+
+        /// <summary>Opens the menu like a right click does (positioned at the tray, closes when clicking elsewhere).</summary>
+        private void ShowMenu() =>
+            typeof(NotifyIcon).GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic)?.Invoke(icon, null);
 
         private void UpdateItems()
         {
