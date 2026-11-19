@@ -282,6 +282,8 @@ namespace ScreenshareHelper
         {
             if (busy)
                 return;
+            watchdogFailures = 0;
+            repairOffered = false;
             if (mode == AppMode.Normal && newMode != AppMode.Normal && Visible)
                 SaveWindowPosition();
 
@@ -296,7 +298,7 @@ namespace ScreenshareHelper
             {
                 if (ParsecDriverSetup.IsBroken)
                 {
-                    if (VirtualMonitorForm.AskToRepairDriver())
+                    if (ConfirmDriverRepair())
                         _ = RepairDriverAsync(switchToVirtualMonitor: true);
                 }
                 else if (VirtualMonitorForm.AskToInstallDriver())
@@ -617,11 +619,16 @@ namespace ScreenshareHelper
         }
 
         private bool watchdogBusy;
+        private int watchdogFailures; // monitor re-creations failed in a row
+        private bool repairOffered; // once per failure episode, the user may have declined
+
+        /// <summary>True if the driver is broken or keeps failing to add the virtual monitor: a restart of the driver may help.</summary>
+        public bool DriverNeedsRepair => ParsecDriverSetup.IsBroken || (mode == AppMode.VirtualMonitor && watchdogFailures >= 3);
 
         /// <summary>
         /// The driver loses the virtual monitor on resume from hibernation (and driver resets): add it again.
         /// The driver calls can block for many seconds when it is stuck, so they never run on the UI thread.
-        /// Failures are silent, the next check retries.
+        /// Failures are retried silently; if the driver is broken or stuck, a restart of the driver is offered once.
         /// </summary>
         private async void VirtualMonitorWatchdog_Tick(object sender, EventArgs e)
         {
@@ -663,15 +670,47 @@ namespace ScreenshareHelper
                 form.FormClosed += VirtualMonitor_FormClosed;
                 virtualMonitor = form;
                 form.Show();
+                watchdogFailures = 0;
+                repairOffered = false;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(ex);
+                watchdogFailures++;
+                await OfferDriverRepairAsync();
             }
             finally
             {
                 watchdogBusy = false;
             }
+        }
+
+        /// <summary>
+        /// The driver died (adapter cannot be opened, e.g. Device Manager error 43) or stopped responding while the
+        /// virtual monitor was in use: offer to restart it. Restarting a device needs administrator rights (UAC).
+        /// </summary>
+        private async Task OfferDriverRepairAsync()
+        {
+            if (repairOffered || closing || mode != AppMode.VirtualMonitor)
+                return;
+            bool broken = await Task.Run(() => ParsecDriverSetup.IsBroken);
+            if (!broken && watchdogFailures < 3)
+                return;
+
+            repairOffered = true;
+            if (ConfirmDriverRepair())
+                await RepairDriverAsync(switchToVirtualMonitor: true);
+            else
+                tray?.ShowInfo("No virtual monitor: the Parsec driver is not working. Tray menu > Setup > Repair restarts it.");
+        }
+
+        /// <summary>Running as administrator there is no UAC prompt, so the driver is restarted without asking.</summary>
+        private bool ConfirmDriverRepair()
+        {
+            if (!VirtualCameraSetup.IsElevated)
+                return VirtualMonitorForm.AskToRepairDriver();
+            tray?.ShowInfo("The Parsec driver is not working, restarting it...");
+            return true;
         }
 
         private void SystemEvents_DisplaySettingsChanged(object sender, EventArgs e)

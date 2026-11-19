@@ -75,6 +75,8 @@ To remove it: **Setup > Uninstall virtual camera**.
 
 The virtual monitor needs the free [Parsec Virtual Display Driver](https://support.parsec.app/hc/en-us/articles/360054478211-Parsec-Virtual-Displays) (signed, installed once with administrator rights). If it is missing, the tool offers to download and run the installer (also in **Setup** in the tray menu, where you can uninstall it again). You don't need a Parsec account or the Parsec app.
 
+If the driver stops working (e.g. after a driver crash), the tool offers to restart it (**Setup** > **Repair** in the tray menu); this needs administrator rights, so Windows asks for them unless the tool already runs as administrator.
+
 The resolution drop-down sets the monitor resolution: **1920x1080** (default, what Teams shares at most), 1280x720, 2560x1440, 3840x2160 or **Auto** (the largest resolution that fits into the area without upscaling). If the area doesn't have the monitor's aspect ratio, the image gets black bars; **16:9** makes the window 16:9 (keeps the height, adjusts the width) before you click "Set".
 
 The monitor is placed at the bottom-right corner of your desktop, touching the other monitors only at the corner, so your mouse can't wander onto it.

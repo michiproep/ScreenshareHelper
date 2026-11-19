@@ -51,7 +51,7 @@ namespace ScreenshareHelper.VirtualMonitor
 
         public static bool AskToRepairDriver()
         {
-            var text = "The Parsec Virtual Display Driver is installed, but not running (Device Manager reports an error, e.g. after a driver crash).\n\n" +
+            var text = "The Parsec Virtual Display Driver is installed, but not working (e.g. after a driver crash).\n\n" +
                 "Restart it now (needs administrator rights)?";
             return MessageBox.Show(text, "ScreenshareHelper", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes;
         }
