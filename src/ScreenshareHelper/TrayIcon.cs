@@ -31,7 +31,13 @@ namespace ScreenshareHelper
 
             installCamera = new ToolStripMenuItem("Install virtual camera", null, (s, e) => owner.InstallCamera());
             uninstallCamera = new ToolStripMenuItem("Uninstall virtual camera", null, (s, e) => owner.UninstallCamera());
-            installDriver = new ToolStripMenuItem("Install virtual monitor driver (Parsec)", null, async (s, e) => await owner.InstallDriverAsync(switchToVirtualMonitor: false));
+            installDriver = new ToolStripMenuItem("Install virtual monitor driver (Parsec)", null, async (s, e) =>
+            {
+                if (ParsecDriverSetup.IsBroken)
+                    await owner.RepairDriverAsync(switchToVirtualMonitor: false);
+                else
+                    await owner.InstallDriverAsync(switchToVirtualMonitor: false);
+            });
             uninstallDriver = new ToolStripMenuItem("Uninstall virtual monitor driver (Parsec)", null, async (s, e) => await owner.UninstallDriverAsync());
             var setup = new ToolStripMenuItem("Setup");
             setup.DropDownItems.AddRange(new ToolStripItem[] { installCamera, uninstallCamera, new ToolStripSeparator(), installDriver, uninstallDriver });
@@ -77,6 +83,8 @@ namespace ScreenshareHelper
             normal.Enabled &= !busy;
             camera.Enabled &= !busy;
             virtualMonitor.Enabled = !busy;
+            bool driverBroken = ParsecDriverSetup.IsBroken;
+            installDriver.Text = driverBroken ? "Repair virtual monitor driver (Parsec)" : "Install virtual monitor driver (Parsec)";
             installDriver.Enabled = !busy && !ParsecDriverSetup.IsInstalled;
             uninstallDriver.Enabled = !busy && ParsecDriverSetup.CanUninstall;
         }

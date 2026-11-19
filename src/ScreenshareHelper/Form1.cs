@@ -294,7 +294,12 @@ namespace ScreenshareHelper
                 newMode = AppMode.Normal;
             if (newMode == AppMode.VirtualMonitor && !ParsecDriverSetup.IsInstalled)
             {
-                if (VirtualMonitorForm.AskToInstallDriver())
+                if (ParsecDriverSetup.IsBroken)
+                {
+                    if (VirtualMonitorForm.AskToRepairDriver())
+                        _ = RepairDriverAsync(switchToVirtualMonitor: true);
+                }
+                else if (VirtualMonitorForm.AskToInstallDriver())
                     _ = InstallDriverAsync(switchToVirtualMonitor: true);
                 newMode = AppMode.Normal;
             }
@@ -447,6 +452,31 @@ namespace ScreenshareHelper
             {
                 Debug.WriteLine(ex);
                 MessageBox.Show($"The Parsec Virtual Display Driver could not be installed: {ex.Message}", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                busy = false;
+            }
+        }
+
+        public async Task RepairDriverAsync(bool switchToVirtualMonitor)
+        {
+            if (busy)
+                return;
+            busy = true;
+            try
+            {
+                bool running = await ParsecDriverSetup.RestartAsync();
+                busy = false;
+                if (running && switchToVirtualMonitor)
+                    ApplyMode(AppMode.VirtualMonitor);
+                else if (!running)
+                    MessageBox.Show("The Parsec Virtual Display Driver is still not running. Restarting Windows usually helps; otherwise uninstall and reinstall it (tray menu > Setup).", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                MessageBox.Show($"The Parsec Virtual Display Driver could not be restarted: {ex.Message}", "ScreenshareHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             finally
             {

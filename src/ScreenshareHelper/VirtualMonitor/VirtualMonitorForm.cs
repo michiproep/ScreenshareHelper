@@ -48,6 +48,13 @@ namespace ScreenshareHelper.VirtualMonitor
             return MessageBox.Show(text, "ScreenshareHelper", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes;
         }
 
+        public static bool AskToRepairDriver()
+        {
+            var text = "The Parsec Virtual Display Driver is installed, but not running (Device Manager reports an error, e.g. after a driver crash).\n\n" +
+                "Restart it now (needs administrator rights)?";
+            return MessageBox.Show(text, "ScreenshareHelper", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes;
+        }
+
         public VirtualMonitorForm(Rectangle area, Size? resolution)
         {
             this.area = area;

@@ -16,7 +16,16 @@ namespace ScreenshareHelper.VirtualMonitor
     {
         private const string UninstallKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
 
+        // hardware id of the "Parsec Virtual Display Adapter" device
+        private const string HardwareId = @"Root\Parsec\VDA";
+
         public static bool IsInstalled => ParsecVirtualDisplay.IsDriverInstalled();
+
+        /// <summary>
+        /// The driver is installed (Apps entry), but its adapter cannot be opened, e.g. Device Manager error 43
+        /// after a driver crash. Reinstalling does not help, restarting the device usually does.
+        /// </summary>
+        public static bool IsBroken => !IsInstalled && FindUninstallCommand() != null;
 
         /// <summary>True if the driver (or at least its uninstaller) is there.</summary>
         public static bool CanUninstall => IsInstalled || FindUninstallCommand() != null;
@@ -32,6 +41,20 @@ namespace ScreenshareHelper.VirtualMonitor
                 return false;
 
             // the driver comes up a moment after the installer exits
+            return await WaitUntilInstalledAsync();
+        }
+
+        /// <summary>Restarts the adapter device (elevated pnputil). Returns true if the driver is available afterwards.</summary>
+        public static async Task<bool> RestartAsync()
+        {
+            var pnputil = Path.Combine(Environment.SystemDirectory, "pnputil.exe");
+            if (!await RunAsync(pnputil, $"/restart-device /deviceid \"{HardwareId}\"", hidden: true))
+                return false;
+            return await WaitUntilInstalledAsync();
+        }
+
+        private static async Task<bool> WaitUntilInstalledAsync()
+        {
             for (int i = 0; i < 20 && !IsInstalled; i++)
                 await Task.Delay(500);
             return IsInstalled;
@@ -46,11 +69,16 @@ namespace ScreenshareHelper.VirtualMonitor
             return await RunAsync(command.Value.file, command.Value.arguments);
         }
 
-        private static async Task<bool> RunAsync(string file, string arguments)
+        private static async Task<bool> RunAsync(string file, string arguments, bool hidden = false)
         {
             try
             {
-                using var process = Process.Start(new ProcessStartInfo(file, arguments) { UseShellExecute = true, Verb = "runas" });
+                using var process = Process.Start(new ProcessStartInfo(file, arguments)
+                {
+                    UseShellExecute = true,
+                    Verb = "runas",
+                    WindowStyle = hidden ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal
+                });
                 await process.WaitForExitAsync();
                 return true;
             }
