@@ -51,9 +51,17 @@ namespace ScreenshareHelper.VirtualMonitor
 
         public static bool AskToRepairDriver()
         {
-            var text = "The Parsec Virtual Display Driver is installed, but not working (e.g. after a driver crash).\n\n" +
-                "Restart it now (needs administrator rights)?";
-            return MessageBox.Show(text, "ScreenshareHelper", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes;
+            var restart = new TaskDialogButton("Restart driver") { ShowShieldIcon = true };
+            var page = new TaskDialogPage
+            {
+                Caption = "ScreenshareHelper",
+                Heading = "The virtual monitor driver is not working",
+                Text = "The Parsec Virtual Display Driver is installed, but not working (e.g. after a driver crash). Restarting it usually helps and needs administrator rights.",
+                Icon = TaskDialogIcon.Warning,
+                AllowCancel = true,
+                Buttons = { restart, new TaskDialogButton("Not now") },
+            };
+            return TaskDialog.ShowDialog(page) == restart;
         }
 
         /// <param name="display">A display created by <see cref="CreateDisplay"/>; null creates it here (blocks the caller).</param>

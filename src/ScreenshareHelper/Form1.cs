@@ -284,6 +284,7 @@ namespace ScreenshareHelper
                 return;
             watchdogFailures = 0;
             repairOffered = false;
+            tray?.SetDriverWarning(false);
             if (mode == AppMode.Normal && newMode != AppMode.Normal && Visible)
                 SaveWindowPosition();
 
@@ -470,6 +471,8 @@ namespace ScreenshareHelper
             {
                 bool running = await ParsecDriverSetup.RestartAsync();
                 busy = false;
+                if (running)
+                    tray?.SetDriverWarning(false);
                 if (running && switchToVirtualMonitor)
                     ApplyMode(AppMode.VirtualMonitor);
                 else if (!running)
@@ -672,6 +675,7 @@ namespace ScreenshareHelper
                 form.Show();
                 watchdogFailures = 0;
                 repairOffered = false;
+                tray?.SetDriverWarning(false);
             }
             catch (Exception ex)
             {
@@ -698,10 +702,17 @@ namespace ScreenshareHelper
                 return;
 
             repairOffered = true;
-            if (ConfirmDriverRepair())
+            if (VirtualCameraSetup.IsElevated)
+            {
+                // no UAC prompt as administrator: restart right away
+                tray?.ShowInfo("The Parsec driver is not working, restarting it...");
                 await RepairDriverAsync(switchToVirtualMonitor: true);
-            else
-                tray?.ShowInfo("No virtual monitor: the Parsec driver is not working. Tray menu > Setup > Repair restarts it.");
+                return;
+            }
+            // no dialog: it would pop up in the middle of a presentation
+            tray?.SetDriverWarning(true);
+            tray?.ShowAction("No virtual monitor: the Parsec driver is not working. Click here to restart it (needs administrator rights).",
+                () => _ = RepairDriverAsync(switchToVirtualMonitor: mode == AppMode.VirtualMonitor));
         }
 
         /// <summary>Running as administrator there is no UAC prompt, so the driver is restarted without asking.</summary>
