@@ -29,7 +29,7 @@ Use `win-x64` (most PCs) or `win-x86`.
 You can actually move the tool to another screen (if you wish and got one) - once you set the capture area with the set-button. This way you can actually see what's happening 
 
 ## Tray icon & modes
-The tool has an icon in the notification area (tray). Its menu switches between three modes; the tool remembers the mode and starts in it next time:
+The tool has an icon in the notification area (tray); left- or right-click it for the menu. The menu switches between three modes; the tool remembers the mode and starts in it next time:
 
 - **Normal (share the window)**: as described above, the window mirrors the capture area and you share the window.
 - **Virtual camera**: no window; the capture area is a webcam (see [Virtual camera](#virtual-camera)).
@@ -74,6 +74,8 @@ To remove it: **Setup > Uninstall virtual camera**.
 *Experimental.* Instead of sharing the tool's window, share a whole (virtual) screen: switch to the **Virtual monitor** mode in the tray menu, place the window over the area you want to show and click **Set**. The tool adds an extra monitor to Windows and shows that area on it, full screen (scaled to fit, black bars, including the mouse pointer). In Teams or Zoom, share that screen. The virtual monitor area is separate from the normal capture area. A thin red frame marks the shared area on your screen; it is click-through and not captured itself, and you can turn it off in the tray menu. Switching to another mode (or closing the tool) removes the monitor again.
 
 The virtual monitor needs the free [Parsec Virtual Display Driver](https://support.parsec.app/hc/en-us/articles/360054478211-Parsec-Virtual-Displays) (signed, installed once with administrator rights). If it is missing, the tool offers to download and run the installer (also in **Setup** in the tray menu, where you can uninstall it again). You don't need a Parsec account or the Parsec app.
+
+If the driver stops working (e.g. after a driver crash), the tool offers to restart it: in the middle of a session with a notification (click it) and a warning sign on the tray icon instead of a dialog, and any time with **Setup** > **Repair** in the tray menu. This needs administrator rights, so Windows asks for them unless the tool already runs as administrator.
 
 The resolution drop-down sets the monitor resolution: **1920x1080** (default, what Teams shares at most), 1280x720, 2560x1440, 3840x2160 or **Auto** (the largest resolution that fits into the area without upscaling). If the area doesn't have the monitor's aspect ratio, the image gets black bars; **16:9** makes the window 16:9 (keeps the height, adjusts the width) before you click "Set".
 
